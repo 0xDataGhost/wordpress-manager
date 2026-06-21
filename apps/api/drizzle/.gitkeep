@@ -1,0 +1,2 @@
+# Generated SQL migrations live here (created by `npm run db:generate`).
+# Keep this folder tracked so `npm run db:migrate` has a target on a fresh clone.
