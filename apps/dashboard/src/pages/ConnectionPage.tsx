@@ -6,15 +6,13 @@ import { ConnectionStatusCard } from "@/components/connection/ConnectionStatusCa
 import { ApiKeyCard } from "@/components/connection/ApiKeyCard";
 import { ConnectStoreCard } from "@/components/connection/ConnectStoreCard";
 import {
-  connectStore,
   disconnectStore,
   fetchConnectionStatus,
   generateApiKey,
-  runHealthCheck,
   type ConnectionStatusDto,
 } from "@/lib/connector-api";
 
-type Action = "generate" | "connect" | "health" | "disconnect";
+type Action = "generate" | "disconnect" | "refresh";
 
 export function ConnectionPage() {
   const [status, setStatus] = useState<ConnectionStatusDto | null>(null);
@@ -73,12 +71,8 @@ export function ConnectionPage() {
     }
   }
 
-  function handleConnect(siteUrl: string) {
-    void run("connect", () => connectStore({ siteUrl }), "تعذّر ربط المتجر.");
-  }
-
-  function handleHealthCheck() {
-    void run("health", runHealthCheck, "تعذّر إجراء فحص الصحة.");
+  function handleRefresh() {
+    void run("refresh", fetchConnectionStatus, "تعذّر تحديث الحالة.");
   }
 
   function handleDisconnect() {
@@ -113,8 +107,8 @@ export function ConnectionPage() {
 
           <ConnectionStatusCard
             status={status}
-            onHealthCheck={handleHealthCheck}
-            healthChecking={action === "health"}
+            onRefresh={handleRefresh}
+            refreshing={action === "refresh"}
           />
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -126,8 +120,6 @@ export function ConnectionPage() {
             />
             <ConnectStoreCard
               status={status}
-              onConnect={handleConnect}
-              connecting={action === "connect"}
               onDisconnect={handleDisconnect}
               disconnecting={action === "disconnect"}
             />

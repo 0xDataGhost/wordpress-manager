@@ -1,12 +1,17 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AuthLayout } from "@/components/layout/AuthLayout";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { RegisterPage } from "@/pages/auth/RegisterPage";
 import { ForgotPasswordPage } from "@/pages/auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/auth/ResetPasswordPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { ConnectionPage } from "@/pages/ConnectionPage";
+import { ProductsListPage } from "@/pages/products/ProductsListPage";
+import { ProductCreatePage } from "@/pages/products/ProductCreatePage";
+import { ProductEditPage } from "@/pages/products/ProductEditPage";
+import { ProductDetailsPage } from "@/pages/products/ProductDetailsPage";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 
@@ -20,39 +25,41 @@ export function AppRoutes() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Route>
 
-      <Route element={<AppLayout />}>
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route
-          path="/products"
-          element={<PlaceholderPage title="المنتجات" phase="المرحلة 6" />}
-        />
-        <Route
-          path="/orders"
-          element={<PlaceholderPage title="الطلبات" phase="المرحلة 7" />}
-        />
-        <Route
-          path="/customers"
-          element={<PlaceholderPage title="العملاء" phase="المرحلة 8" />}
-        />
-        <Route
-          path="/team"
-          element={
-            <PlaceholderPage title="الموظفين والصلاحيات" phase="المرحلة 3" />
-          }
-        />
-        <Route
-          path="/automations"
-          element={<PlaceholderPage title="الأتمتة" phase="المرحلة 10" />}
-        />
-        <Route
-          path="/notifications"
-          element={<PlaceholderPage title="الإشعارات" phase="المرحلة 11" />}
-        />
-        <Route path="/connection" element={<ConnectionPage />} />
-        <Route
-          path="/settings"
-          element={<PlaceholderPage title="الإعدادات" phase="المرحلة 12" />}
-        />
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppLayout />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/products" element={<ProductsListPage />} />
+          <Route path="/products/new" element={<ProductCreatePage />} />
+          <Route path="/products/:id" element={<ProductDetailsPage />} />
+          <Route path="/products/:id/edit" element={<ProductEditPage />} />
+          <Route
+            path="/orders"
+            element={<PlaceholderPage title="الطلبات" phase="المرحلة 7" />}
+          />
+          <Route
+            path="/customers"
+            element={<PlaceholderPage title="العملاء" phase="المرحلة 8" />}
+          />
+          <Route
+            path="/team"
+            element={
+              <PlaceholderPage title="الموظفين والصلاحيات" phase="المرحلة 3" />
+            }
+          />
+          <Route
+            path="/automations"
+            element={<PlaceholderPage title="الأتمتة" phase="المرحلة 10" />}
+          />
+          <Route
+            path="/notifications"
+            element={<PlaceholderPage title="الإشعارات" phase="المرحلة 11" />}
+          />
+          <Route path="/connection" element={<ConnectionPage />} />
+          <Route
+            path="/settings"
+            element={<PlaceholderPage title="الإعدادات" phase="المرحلة 12" />}
+          />
+        </Route>
       </Route>
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />

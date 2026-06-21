@@ -27,6 +27,14 @@ const envSchema = z.object({
     .min(32, "JWT_REFRESH_SECRET must be at least 32 characters"),
   JWT_ACCESS_EXPIRES_IN: z.string().min(1).default("15m"),
   JWT_REFRESH_EXPIRES_IN: z.string().min(1).default("7d"),
+  // Redis-backed fixed-window rate limiting for the auth endpoints. The window
+  // and max are shared across login/register/refresh, each with its own bucket.
+  AUTH_RATE_LIMIT_ENABLED: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
+  AUTH_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(900),
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
 });
 
 const parsed = envSchema.safeParse(process.env);

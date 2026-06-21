@@ -1,0 +1,247 @@
+import { useCallback, useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowRight, Pencil, UploadCloud, Archive } from "lucide-react";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { LoadingState } from "@/components/shared/LoadingState";
+import { ErrorState } from "@/components/shared/ErrorState";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { PRODUCT_STATUS_META } from "@/components/products/product-status";
+import {
+  archiveProduct,
+  getProduct,
+  publishProduct,
+  type ProductDto,
+} from "@/lib/products-api";
+import { formatDateTime } from "@/lib/utils";
+
+type Banner = { tone: "success" | "error"; message: string };
+
+function formatPrice(price: string): string {
+  const value = Number(price);
+  if (Number.isNaN(value)) return price;
+  return `${value.toLocaleString("ar-EG", { minimumFractionDigits: 2 })} ر.س`;
+}
+
+function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1 border-b border-border/60 py-3 last:border-0 sm:flex-row sm:items-center sm:justify-between">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium">{children}</span>
+    </div>
+  );
+}
+
+export function ProductDetailsPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [product, setProduct] = useState<ProductDto | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [banner, setBanner] = useState<Banner | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    setError(false);
+    try {
+      setProduct(await getProduct(id));
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function handlePublish() {
+    if (!id) return;
+    setPublishing(true);
+    setBanner(null);
+    try {
+      await publishProduct(id);
+      setBanner({
+        tone: "success",
+        message:
+          "تم قبول طلب النشر. تسليم المنتج إلى ووكومرس يتم في مرحلة لاحقة.",
+      });
+    } catch (err) {
+      setBanner({
+        tone: "error",
+        message: err instanceof Error ? err.message : "تعذّر نشر المنتج.",
+      });
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  async function handleArchive() {
+    if (!id) return;
+    setArchiving(true);
+    try {
+      const updated = await archiveProduct(id);
+      setProduct(updated);
+      setArchiveOpen(false);
+      setBanner({ tone: "success", message: "تم أرشفة المنتج." });
+    } catch (err) {
+      setBanner({
+        tone: "error",
+        message: err instanceof Error ? err.message : "تعذّر أرشفة المنتج.",
+      });
+    } finally {
+      setArchiving(false);
+    }
+  }
+
+  return (
+    <div className="animate-fade-in">
+      <PageHeader
+        title={product?.name ?? "تفاصيل المنتج"}
+        description="عرض تفاصيل المنتج وإدارته."
+        actions={
+          <Button variant="outline" onClick={() => navigate("/products")}>
+            <ArrowRight className="h-4 w-4" />
+            رجوع
+          </Button>
+        }
+      />
+
+      {loading ? (
+        <LoadingState />
+      ) : error || !product ? (
+        <ErrorState
+          description="تعذّر تحميل المنتج. يرجى المحاولة مرة أخرى."
+          onRetry={() => void load()}
+        />
+      ) : (
+        <div className="space-y-4">
+          {banner ? (
+            <div
+              role="alert"
+              className={
+                banner.tone === "success"
+                  ? "rounded-md border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400"
+                  : "rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+              }
+            >
+              {banner.message}
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild>
+              <Link to={`/products/${product.id}/edit`}>
+                <Pencil className="h-4 w-4" />
+                تعديل
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => void handlePublish()}
+              disabled={publishing}
+            >
+              <UploadCloud className="h-4 w-4" />
+              نشر إلى ووكومرس
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setArchiveOpen(true)}
+              disabled={product.status === "archived"}
+            >
+              <Archive className="h-4 w-4" />
+              أرشفة
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>البيانات الأساسية</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <DetailRow label="الاسم">{product.name}</DetailRow>
+                <DetailRow label="الحالة">
+                  <StatusBadge
+                    label={PRODUCT_STATUS_META[product.status].label}
+                    tone={PRODUCT_STATUS_META[product.status].tone}
+                  />
+                </DetailRow>
+                <DetailRow label="السعر">
+                  <span dir="ltr">{formatPrice(product.price)}</span>
+                </DetailRow>
+                <DetailRow label="المخزون">{product.stockQuantity}</DetailRow>
+                <DetailRow label="الوصف المختصر">
+                  {product.shortDescription || "—"}
+                </DetailRow>
+                <DetailRow label="الوصف الكامل">
+                  {product.description || "—"}
+                </DetailRow>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>المزامنة والصورة</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="mb-4 overflow-hidden rounded-md border bg-muted/30">
+                  {product.imageUrl ? (
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name}
+                      className="h-40 w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-40 w-full items-center justify-center text-sm text-muted-foreground">
+                      لا توجد صورة
+                    </div>
+                  )}
+                </div>
+                <DetailRow label="معرّف ووكومرس">
+                  {product.wpProductId ? (
+                    <span dir="ltr">#{product.wpProductId}</span>
+                  ) : (
+                    "غير منشور"
+                  )}
+                </DetailRow>
+                <DetailRow label="آخر مزامنة">
+                  {formatDateTime(product.lastSyncedAt)}
+                </DetailRow>
+                <DetailRow label="أُنشئ في">
+                  {formatDateTime(product.createdAt)}
+                </DetailRow>
+                <DetailRow label="آخر تحديث">
+                  {formatDateTime(product.updatedAt)}
+                </DetailRow>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={archiveOpen}
+        onOpenChange={setArchiveOpen}
+        title="أرشفة المنتج"
+        description="سيتم نقل المنتج إلى الأرشيف ولن يظهر كمنتج نشط. يمكنك إعادة تفعيله لاحقًا بتعديل حالته."
+        confirmLabel="أرشفة"
+        destructive
+        loading={archiving}
+        onConfirm={() => void handleArchive()}
+      />
+    </div>
+  );
+}

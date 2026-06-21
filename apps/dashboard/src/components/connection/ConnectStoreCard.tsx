@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { Link2, Unplug } from "lucide-react";
+import { useState } from "react";
+import { Unplug } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -8,103 +8,65 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import type { ConnectionStatusDto } from "@/lib/connector-api";
 
-function isValidUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
+const STEPS = [
+  "ولّد مفتاح API من البطاقة المجاورة وانسخه فورًا.",
+  "ثبّت إضافة «SaaS Connector» وفعّلها داخل ووردبريس.",
+  "الصق المفتاح في إعدادات الإضافة لإتمام الربط من جهة ووردبريس.",
+  "اضغط «تحديث الحالة» بالأعلى لتظهر حالة الاتصال هنا.",
+];
 
 type Props = {
   status: ConnectionStatusDto;
-  onConnect: (siteUrl: string) => void;
-  connecting: boolean;
   onDisconnect: () => void;
   disconnecting: boolean;
 };
 
-export function ConnectStoreCard({
-  status,
-  onConnect,
-  connecting,
-  onDisconnect,
-  disconnecting,
-}: Props) {
-  const [siteUrl, setSiteUrl] = useState(status.siteUrl ?? "");
-  const [touched, setTouched] = useState(false);
+export function ConnectStoreCard({ status, onDisconnect, disconnecting }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
-
-  const trimmed = siteUrl.trim();
-  const urlValid = isValidUrl(trimmed);
-  const showUrlError = touched && trimmed.length > 0 && !urlValid;
-  const canConnect = status.hasApiKey && urlValid && !connecting;
   const isDisconnected = status.status === "disconnected";
-
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    setTouched(true);
-    if (canConnect) onConnect(trimmed);
-  }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>ربط المتجر</CardTitle>
         <CardDescription>
-          أدخل رابط متجرك ثم اضغط ربط. أدخل المفتاح المُولّد في إضافة «SaaS
-          Connector» داخل ووردبريس لإتمام الربط.
+          يتم الربط من إضافة ووردبريس باستخدام مفتاح API. اتبع الخطوات التالية،
+          ثم تابع حالة الاتصال من بطاقة «حالة الاتصال».
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={submit} className="space-y-4" noValidate>
-          <div className="space-y-2">
-            <Label htmlFor="siteUrl">رابط المتجر</Label>
-            <Input
-              id="siteUrl"
-              dir="ltr"
-              inputMode="url"
-              placeholder="https://store.example.com"
-              value={siteUrl}
-              onChange={(event) => setSiteUrl(event.target.value)}
-              onBlur={() => setTouched(true)}
-            />
-            {showUrlError ? (
-              <p className="text-xs text-destructive">
-                أدخل رابطًا صحيحًا يبدأ بـ http أو https.
-              </p>
-            ) : null}
-            {!status.hasApiKey ? (
-              <p className="text-xs text-muted-foreground">
-                ولّد مفتاح API أولًا لتفعيل الربط.
-              </p>
-            ) : null}
-          </div>
+      <CardContent className="space-y-4">
+        <ol className="space-y-2 text-sm text-muted-foreground">
+          {STEPS.map((step, index) => (
+            <li key={step} className="flex gap-2">
+              <span className="font-medium text-foreground">{index + 1}.</span>
+              <span>{step}</span>
+            </li>
+          ))}
+        </ol>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="submit" disabled={!canConnect}>
-              <Link2 />
-              {status.status === "connected" ? "إعادة الربط" : "ربط المتجر"}
-            </Button>
-            {!isDisconnected ? (
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => setConfirmOpen(true)}
-                disabled={disconnecting}
-              >
-                <Unplug />
-                فصل المتجر
-              </Button>
-            ) : null}
+        {status.siteUrl ? (
+          <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
+            <span className="text-sm text-muted-foreground">رابط المتجر</span>
+            <span className="truncate text-sm font-medium" dir="ltr">
+              {status.siteUrl}
+            </span>
           </div>
-        </form>
+        ) : null}
+
+        {!isDisconnected ? (
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => setConfirmOpen(true)}
+            disabled={disconnecting}
+          >
+            <Unplug />
+            فصل المتجر
+          </Button>
+        ) : null}
       </CardContent>
 
       <ConfirmDialog

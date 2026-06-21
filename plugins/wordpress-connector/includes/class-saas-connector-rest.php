@@ -2,11 +2,12 @@
 /**
  * REST API surface exposed by the connector.
  *
- * Phase 4 ships a single health endpoint so the SaaS can confirm the site is
- * reachable and the plugin is active. It returns only non-sensitive status —
- * never the API key or settings — and is therefore safe to expose publicly.
- * (HMAC verification via Saas_Connector_Signature is available to lock this
- * down in a later phase.)
+ * Phase 4 shipped a public health endpoint so the SaaS can confirm the site is
+ * reachable and the plugin is active. Phase 5 adds authenticated product
+ * create/update endpoints (POST /products, PUT /products/{id}) that the SaaS
+ * calls to push catalog data into WooCommerce. Those endpoints verify the
+ * connector's HMAC signature via Saas_Connector_Products::authorize() and
+ * return only non-sensitive product data — never the API key or settings.
  *
  * @package SaasConnector
  */
@@ -20,6 +21,17 @@ class Saas_Connector_Rest {
 	const NAMESPACE = 'saas/v1';
 
 	/**
+	 * Product write endpoints handler.
+	 *
+	 * @var Saas_Connector_Products
+	 */
+	private $products;
+
+	public function __construct() {
+		$this->products = new Saas_Connector_Products();
+	}
+
+	/**
 	 * Hook route registration.
 	 */
 	public function register() {
@@ -27,7 +39,7 @@ class Saas_Connector_Rest {
 	}
 
 	/**
-	 * Register GET /wp-json/saas/v1/health.
+	 * Register the connector's REST routes.
 	 */
 	public function register_routes() {
 		register_rest_route(
@@ -37,6 +49,33 @@ class Saas_Connector_Rest {
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => array( $this, 'health' ),
 				'permission_callback' => '__return_true',
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/products',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this->products, 'create_product' ),
+				'permission_callback' => array( $this->products, 'authorize' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/products/(?P<id>\d+)',
+			array(
+				'methods'             => WP_REST_Server::EDITABLE,
+				'callback'            => array( $this->products, 'update_product' ),
+				'permission_callback' => array( $this->products, 'authorize' ),
+				'args'                => array(
+					'id' => array(
+						'validate_callback' => static function ( $value ) {
+							return is_numeric( $value );
+						},
+					),
+				),
 			)
 		);
 	}

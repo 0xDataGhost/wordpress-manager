@@ -59,6 +59,32 @@ export async function connectionStatus(
 }
 
 /**
+ * POST /stores/current/disconnect — dashboard-only (settings.edit). Lets the
+ * store owner revoke the connector key and reset the connection from the
+ * dashboard without needing the WordPress plugin. Idempotent: a store with no
+ * connection row simply reports "disconnected".
+ */
+export async function disconnectCurrentStore(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { storeId } = getAuth(req);
+  const connection = await getConnectionByStoreId(storeId);
+
+  if (!connection) {
+    res
+      .status(200)
+      .json(successResponse(disconnectedStatusDto(storeId), "Store disconnected"));
+    return;
+  }
+
+  const updated = await disconnect(connection.id);
+  res
+    .status(200)
+    .json(successResponse(toConnectionStatusDto(updated), "Store disconnected"));
+}
+
+/**
  * POST /wp/connect — connector-authenticated. Confirms the WordPress site owns a
  * valid key and records the reported site metadata, marking the store connected.
  */

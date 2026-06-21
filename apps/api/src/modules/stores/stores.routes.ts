@@ -3,7 +3,10 @@ import { asyncHandler } from "../../lib/async-handler";
 import { authenticate } from "../../middleware/authenticate";
 import { requirePermission } from "../../middleware/authorize";
 import { validate } from "../../middleware/validate";
-import { generateApiKey } from "../connections/connections.controller";
+import {
+  disconnectCurrentStore,
+  generateApiKey,
+} from "../connections/connections.controller";
 import { createStore, getCurrentStore } from "./stores.controller";
 import { createStoreSchema } from "./stores.schemas";
 
@@ -26,6 +29,14 @@ router.post(
   authenticate,
   requirePermission("settings.edit"),
   asyncHandler(generateApiKey),
+);
+
+// POST /stores/current/disconnect — revoke the key and reset the connection
+router.post(
+  "/current/disconnect",
+  authenticate,
+  requirePermission("settings.edit"),
+  asyncHandler(disconnectCurrentStore),
 );
 
 export default router;

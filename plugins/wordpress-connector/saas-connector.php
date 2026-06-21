@@ -27,6 +27,7 @@ define( 'SAAS_CONNECTOR_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 require_once SAAS_CONNECTOR_PLUGIN_DIR . 'includes/class-saas-connector-settings.php';
 require_once SAAS_CONNECTOR_PLUGIN_DIR . 'includes/class-saas-connector-signature.php';
 require_once SAAS_CONNECTOR_PLUGIN_DIR . 'includes/class-saas-connector-api-client.php';
+require_once SAAS_CONNECTOR_PLUGIN_DIR . 'includes/class-saas-connector-products.php';
 require_once SAAS_CONNECTOR_PLUGIN_DIR . 'includes/class-saas-connector-rest.php';
 require_once SAAS_CONNECTOR_PLUGIN_DIR . 'includes/class-saas-connector-admin.php';
 require_once SAAS_CONNECTOR_PLUGIN_DIR . 'includes/class-saas-connector.php';

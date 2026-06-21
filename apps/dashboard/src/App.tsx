@@ -1,6 +1,7 @@
 import { BrowserRouter } from "react-router-dom";
 import { DirectionProvider } from "@radix-ui/react-direction";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 import { AppRoutes } from "@/routes/AppRoutes";
 
 export default function App() {
@@ -8,7 +9,9 @@ export default function App() {
     <DirectionProvider dir="rtl">
       <ThemeProvider>
         <BrowserRouter>
-          <AppRoutes />
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
         </BrowserRouter>
       </ThemeProvider>
     </DirectionProvider>

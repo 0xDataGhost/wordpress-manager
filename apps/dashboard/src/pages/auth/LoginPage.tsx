@@ -12,6 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { ApiError } from "@/lib/http";
 
 const schema = z.object({
   email: z
@@ -25,18 +27,28 @@ type LoginForm = z.infer<typeof schema>;
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const { signIn } = useAuth();
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>({
     resolver: zodResolver(schema),
     defaultValues: { email: "", password: "" },
   });
 
-  // UI-only in Phase 1: navigate into the app without real auth.
-  const onSubmit = handleSubmit(() => {
-    navigate("/dashboard");
+  const onSubmit = handleSubmit(async (values) => {
+    try {
+      await signIn(values);
+      navigate("/dashboard", { replace: true });
+    } catch (error) {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "تعذّر تسجيل الدخول. تحقق من اتصالك وحاول مرة أخرى.";
+      setError("root", { message });
+    }
   });
 
   return (
@@ -47,6 +59,15 @@ export function LoginPage() {
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-4" noValidate>
+          {errors.root ? (
+            <div
+              role="alert"
+              className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
+              {errors.root.message}
+            </div>
+          ) : null}
+
           <div className="space-y-2">
             <Label htmlFor="email">البريد الإلكتروني</Label>
             <Input

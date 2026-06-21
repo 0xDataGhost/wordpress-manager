@@ -15,6 +15,13 @@
       "when": 1782055678159,
       "tag": "0001_spooky_preak",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782075781466,
+      "tag": "0002_whole_whizzer",
+      "breakpoints": true
     }
   ]
 }

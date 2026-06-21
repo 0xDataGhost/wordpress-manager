@@ -26,14 +26,14 @@ function healthView(status: ConnectionStatusDto): { label: string; dot: string }
 
 type Props = {
   status: ConnectionStatusDto;
-  onHealthCheck: () => void;
-  healthChecking: boolean;
+  onRefresh: () => void;
+  refreshing: boolean;
 };
 
 export function ConnectionStatusCard({
   status,
-  onHealthCheck,
-  healthChecking,
+  onRefresh,
+  refreshing,
 }: Props) {
   const view = STATUS_VIEW[status.status];
   const health = healthView(status);
@@ -76,13 +76,9 @@ export function ConnectionStatusCard({
           </dl>
         ) : null}
 
-        <Button
-          variant="outline"
-          onClick={onHealthCheck}
-          disabled={!isConnected || healthChecking}
-        >
-          <RefreshCw className={cn(healthChecking && "animate-spin")} />
-          تشغيل فحص الصحة
+        <Button variant="outline" onClick={onRefresh} disabled={refreshing}>
+          <RefreshCw className={cn(refreshing && "animate-spin")} />
+          تحديث الحالة
         </Button>
       </CardContent>
     </Card>

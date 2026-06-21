@@ -66,6 +66,12 @@ export class ConflictError extends AppError {
   }
 }
 
+export class RateLimitError extends AppError {
+  constructor(message = "Too many requests. Please try again later.", details?: unknown) {
+    super(message, { statusCode: 429, code: "RATE_LIMITED", details });
+  }
+}
+
 export class ServiceUnavailableError extends AppError {
   constructor(message = "Service temporarily unavailable", details?: unknown) {
     super(message, { statusCode: 503, code: "SERVICE_UNAVAILABLE", details });
