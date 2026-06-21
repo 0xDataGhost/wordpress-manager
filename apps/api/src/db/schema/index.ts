@@ -2,10 +2,15 @@
  * Drizzle schema barrel — the single source of truth for the database schema
  * and the input for drizzle-kit migration generation.
  *
- * Business tables (users, stores, store_users, roles, permissions,
- * role_permissions, user_roles, refresh_tokens, ...) are added in Phase 3.
- * Multi-tenant tables must carry a `store_id` (tenant) column and scope every
- * query by it. Keep all table definitions exported from this module.
+ * Multi-tenant tables carry a `store_id` (tenant) column and every query must
+ * scope by it. Keep all table definitions exported from this module.
  */
 
-export {};
+export * from "./users";
+export * from "./stores";
+export * from "./store-users";
+export * from "./roles";
+export * from "./permissions";
+export * from "./role-permissions";
+export * from "./user-roles";
+export * from "./refresh-tokens";

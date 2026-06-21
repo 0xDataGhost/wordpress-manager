@@ -14,14 +14,19 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().min(1).default("*"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   DB_POOL_MAX: z.coerce.number().int().positive().default(10),
-  DB_CONNECTION_TIMEOUT_MS: z.coerce
-    .number()
-    .int()
-    .positive()
-    .default(10_000),
+  DB_CONNECTION_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
   DB_IDLE_TIMEOUT_MS: z.coerce.number().int().nonnegative().default(30_000),
   REDIS_URL: z.string().min(1, "REDIS_URL is required"),
   SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
+  BCRYPT_ROUNDS: z.coerce.number().int().min(10).max(15).default(12),
+  JWT_ACCESS_SECRET: z
+    .string()
+    .min(32, "JWT_ACCESS_SECRET must be at least 32 characters"),
+  JWT_REFRESH_SECRET: z
+    .string()
+    .min(32, "JWT_REFRESH_SECRET must be at least 32 characters"),
+  JWT_ACCESS_EXPIRES_IN: z.string().min(1).default("15m"),
+  JWT_REFRESH_EXPIRES_IN: z.string().min(1).default("7d"),
 });
 
 const parsed = envSchema.safeParse(process.env);

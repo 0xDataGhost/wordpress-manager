@@ -18,6 +18,9 @@ pool.on("error", (err) => {
 
 export const db = drizzle(pool, { schema });
 
+/** Transaction handle passed to db.transaction callbacks. */
+export type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /** Lightweight connectivity probe used by startup checks and /health. */
 export async function checkDatabaseConnection(): Promise<void> {
   await db.execute(sql`SELECT 1`);
