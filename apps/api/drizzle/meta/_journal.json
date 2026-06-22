@@ -36,6 +36,20 @@
       "when": 1782167869181,
       "tag": "0004_orders_internal_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1782170008316,
+      "tag": "0005_customers_internal_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782171088055,
+      "tag": "0006_orders_customer_index",
+      "breakpoints": true
     }
   ]
 }

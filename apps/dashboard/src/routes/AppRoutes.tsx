@@ -14,6 +14,8 @@ import { ProductEditPage } from "@/pages/products/ProductEditPage";
 import { ProductDetailsPage } from "@/pages/products/ProductDetailsPage";
 import { OrdersListPage } from "@/pages/orders/OrdersListPage";
 import { OrderDetailsPage } from "@/pages/orders/OrderDetailsPage";
+import { CustomersListPage } from "@/pages/customers/CustomersListPage";
+import { CustomerDetailsPage } from "@/pages/customers/CustomerDetailsPage";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 
@@ -36,10 +38,8 @@ export function AppRoutes() {
           <Route path="/products/:id/edit" element={<ProductEditPage />} />
           <Route path="/orders" element={<OrdersListPage />} />
           <Route path="/orders/:id" element={<OrderDetailsPage />} />
-          <Route
-            path="/customers"
-            element={<PlaceholderPage title="العملاء" phase="المرحلة 8" />}
-          />
+          <Route path="/customers" element={<CustomersListPage />} />
+          <Route path="/customers/:id" element={<CustomerDetailsPage />} />
           <Route
             path="/team"
             element={

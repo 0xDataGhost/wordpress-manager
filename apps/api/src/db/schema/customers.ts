@@ -17,6 +17,9 @@ import { stores } from "./stores";
  * outside Woo (none yet in this phase). Aggregate fields (total_spent,
  * orders_count, last_order_at) mirror WooCommerce's customer summary and are
  * refreshed on each sync.
+ *
+ * `internal_notes` is dashboard-owned (never written by sync) so operators can
+ * annotate a customer without touching WooCommerce.
  */
 export const customers = pgTable(
   "customers",
@@ -37,6 +40,8 @@ export const customers = pgTable(
       .default("0"),
     ordersCount: integer("orders_count").notNull().default(0),
     lastOrderAt: timestamp("last_order_at", { withTimezone: true }),
+    // Dashboard-only operator notes. Never written by WooCommerce sync.
+    internalNotes: text("internal_notes"),
     // Last successful sync with WooCommerce, for bookkeeping.
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })

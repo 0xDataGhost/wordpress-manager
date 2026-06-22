@@ -1,0 +1,1 @@
+CREATE INDEX "orders_store_customer_idx" ON "orders" USING btree ("store_id","customer_id") WHERE "orders"."customer_id" is not null;

@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  index,
   integer,
   numeric,
   pgTable,
@@ -78,6 +79,11 @@ export const orders = pgTable(
     storeWpOrderUnique: uniqueIndex("orders_store_wp_order_unique")
       .on(table.storeId, table.wpOrderId)
       .where(sql`${table.wpOrderId} is not null`),
+    // Supports per-customer order lookups (customer metrics + linked orders).
+    // Partial: guest orders (null customer_id) never match a customer query.
+    storeCustomerIdx: index("orders_store_customer_idx")
+      .on(table.storeId, table.customerId)
+      .where(sql`${table.customerId} is not null`),
   }),
 );
 

@@ -143,8 +143,8 @@ Do not build these in MVP:
 | 5.2 | Hardening: Real Connection Backend + Auth Rate Limiting | ✅ COMPLETED |
 | 6 | WooCommerce Sync Foundation | ✅ COMPLETED |
 | 7 | Orders Module | ✅ COMPLETED |
-| 8 | Customers Module | ⏭️ NEXT |
-| 9 | Dashboard Analytics | ⏳ PENDING |
+| 8 | Customers Module | ✅ COMPLETED |
+| 9 | Dashboard Analytics | ⏭️ NEXT |
 | 10 | Notifications Center | ⏳ PENDING |
 | 11 | Automations MVP | ⏳ PENDING |
 | 12 | Settings Module | ⏳ PENDING |
@@ -812,7 +812,20 @@ PATCH /orders/:id/notes
 
 ---
 
-# Phase 8 — Customers Module ⏳ PENDING
+# Phase 8 — Customers Module ✅ COMPLETED
+
+## Implementation Notes (completed)
+
+- **DB (migration 0005):** added `internal_notes` (dashboard-only operator notes, never written by sync) to the existing `customers` table.
+- **RBAC:** added a new `customers.edit` permission (the catalog previously had only `customers.view`); granted to `owner` (via ALL), `manager`, and `customer-support`. Seed is idempotent and was re-run.
+- **Backend customers module** (`/customers`, `/customers/:id`, `/customers/:id/notes`): JWT-protected, tenant-scoped by `storeId`, Zod-validated, mirroring the Orders module shape. List supports search (name/email/phone, wildcards escaped), pagination, and a deterministic newest-first order (createdAt + id tiebreaker); list columns use the WooCommerce-synced aggregate fields (fast, no per-row queries). Details computes metrics from the customer's locally synced orders in a single aggregate query, plus the most recent linked orders (read-only, capped at 20). Notes update normalizes empty/whitespace to `null`.
+- **Metric status policy (audited):** `totalOrders` counts ALL of the customer's orders; `totalSpent` counts only PAID orders (`completed`, `processing`) so refunded/cancelled/failed/pending money is not reported as spent (matches WooCommerce's paid-status definition); `firstOrderAt`/`lastOrderAt` span all statuses.
+- **DB (migration 0006):** added a partial index `orders_store_customer_idx` on `orders (store_id, customer_id) WHERE customer_id IS NOT NULL` to back the per-customer metrics + linked-orders queries.
+- **Permissions:** `customers.view` for list/details, `customers.edit` for the notes update — enforced by `requirePermission`.
+- **Frontend (Arabic RTL):** `/customers` list (search, pagination, columns: name / email / phone / total orders / total spent / created date, loading/empty/error states) and `/customers/:id` details (metric tiles, profile, recent orders table linking to order details, internal-notes editor + save gated by `customers.edit`, back button).
+- **Read-only integration with Phase 6:** the module only reads the customers/orders rows that sync produces; Phase 6 sync behavior was not modified.
+- **Divergence from the original plan sketch (intentional, per the approved Phase 8 scope):** notes + `customers.edit` + summary metrics + embedded recent-orders replace the sketch's separate `GET /customers/:id/orders` endpoint; the جديد/نشط/متأخر/VIP status label is **not** implemented (kept out to avoid CRM scope creep) — available to add later if desired.
+- **Not in this phase (out of scope):** no customer create/delete/merge/import/export, no analytics (Phase 9), no notifications/automations/webhooks/WhatsApp/email/AI.
 
 ## Goal
 
@@ -1357,8 +1370,8 @@ Phase 5.1 — Products Module Foundation                ✅ COMPLETED
 Phase 5.2 — Hardening (Connection backend + rate limit) ✅ COMPLETED
 Phase 6   — WooCommerce Sync Foundation               ✅ COMPLETED
 Phase 7   — Orders Module                             ✅ COMPLETED
-Phase 8   — Customers Module                          ⏭️ NEXT
-Phase 9   — Dashboard Analytics                       ⏳ PENDING
+Phase 8   — Customers Module                          ✅ COMPLETED
+Phase 9   — Dashboard Analytics                       ⏭️ NEXT
 Phase 10  — Notifications Center                      ⏳ PENDING
 Phase 11  — Automations MVP                           ⏳ PENDING
 Phase 12  — Settings Module                           ⏳ PENDING
