@@ -126,6 +126,20 @@ class Saas_Connector_Api_Client {
 	}
 
 	/**
+	 * Trigger a manual sync on the SaaS via /wp/sync. The SaaS then pulls the
+	 * requested data back from this site's read endpoints — the connector only
+	 * asks for the sync, keeping all business logic on the SaaS side.
+	 *
+	 * @param string $api_url Base API URL.
+	 * @param string $api_key Connector API key.
+	 * @param string $entity  One of product|order|customer|all.
+	 * @return array{ok:bool,code:int,data:mixed,message:string}
+	 */
+	public static function sync( $api_url, $api_key, $entity = 'all' ) {
+		return self::post( $api_url, $api_key, 'wp/sync', array( 'entity' => $entity ) );
+	}
+
+	/**
 	 * Join the configured base URL and an endpoint path safely.
 	 *
 	 * @param string $api_url Base API URL.

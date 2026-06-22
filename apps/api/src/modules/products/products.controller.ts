@@ -100,7 +100,7 @@ export async function deleteProductHandler(
     .json(successResponse(toProductDto(product), "Product archived"));
 }
 
-/** POST /products/:id/publish — publish foundation to WooCommerce (products.edit). */
+/** POST /products/:id/publish — deliver the product to WooCommerce (products.edit). */
 export async function publishProductHandler(
   req: Request,
   res: Response,
@@ -109,15 +109,15 @@ export async function publishProductHandler(
   const { id } = req.params as ProductParams;
   const result = await publishProductToWp(storeId, id);
 
-  res.status(202).json(
+  res.status(200).json(
     successResponse(
       {
         product: toProductDto(result.product),
         connectionStatus: result.connectionStatus,
-        payloadPreview: result.wooPayload,
-        dispatched: false,
+        wpProductId: result.wpProductId,
+        dispatched: result.dispatched,
       },
-      "Publish accepted. Delivery to WooCommerce is handled in a later phase.",
+      "Product published to WooCommerce",
     ),
   );
 }

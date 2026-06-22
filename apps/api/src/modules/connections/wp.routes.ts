@@ -6,6 +6,8 @@ import { requirePermission } from "../../middleware/authorize";
 import { validate } from "../../middleware/validate";
 import { syncProductsHandler } from "../products/products.controller";
 import { connectorSyncSchema } from "../products/products.schemas";
+import { wpTriggerSyncHandler } from "../sync/sync.controller";
+import { wpSyncTriggerSchema } from "../sync/sync.schemas";
 import {
   connectionStatus,
   wpConnect,
@@ -33,6 +35,15 @@ router.post(
   authenticateConnector,
   validate({ body: connectorSyncSchema }),
   asyncHandler(syncProductsHandler),
+);
+
+// Connector's "Manual Sync" button asks the SaaS to pull WooCommerce data. The
+// SaaS owns the sync logic; the plugin only triggers it (thin connector).
+router.post(
+  "/sync",
+  authenticateConnector,
+  validate({ body: wpSyncTriggerSchema }),
+  asyncHandler(wpTriggerSyncHandler),
 );
 
 // Dashboard-authenticated endpoint (JWT). Scoped to the token's store.

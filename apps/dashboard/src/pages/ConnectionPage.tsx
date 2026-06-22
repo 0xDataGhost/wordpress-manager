@@ -5,6 +5,7 @@ import { ErrorState } from "@/components/shared/ErrorState";
 import { ConnectionStatusCard } from "@/components/connection/ConnectionStatusCard";
 import { ApiKeyCard } from "@/components/connection/ApiKeyCard";
 import { ConnectStoreCard } from "@/components/connection/ConnectStoreCard";
+import { SyncCard } from "@/components/connection/SyncCard";
 import {
   disconnectStore,
   fetchConnectionStatus,
@@ -124,6 +125,8 @@ export function ConnectionPage() {
               disconnecting={action === "disconnect"}
             />
           </div>
+
+          <SyncCard status={status} />
         </div>
       )}
     </div>

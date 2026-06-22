@@ -5,6 +5,7 @@ import {
   type StoreConnectionRow,
 } from "../../db/schema/store-connections";
 import { generateApiKey } from "../../lib/api-key";
+import { encryptSecret } from "../../lib/connector-crypto";
 
 /** Returns the connection row for a store, or null when none exists yet. */
 export async function getConnectionByStoreId(
@@ -62,6 +63,13 @@ export async function issueApiKey(storeId: string): Promise<IssuedApiKey> {
   await ensureConnection(storeId);
   const key = generateApiKey();
 
+  // Encrypt the FULL plaintext key at rest so the SaaS can later sign outbound
+  // requests to WordPress (publish + pull sync). Returns null when outbound
+  // encryption is not configured, in which case no cipher material is stored and
+  // outbound delivery stays disabled. The inbound-verification hash is always
+  // stored regardless.
+  const encrypted = encryptSecret(key.plaintext);
+
   const [updated] = await db
     .update(storeConnections)
     .set({
@@ -69,6 +77,9 @@ export async function issueApiKey(storeId: string): Promise<IssuedApiKey> {
       apiKeyHash: key.secretHash,
       apiKeyPrefix: key.displayPrefix,
       apiKeyGeneratedAt: new Date(),
+      apiKeyCipher: encrypted?.cipher ?? null,
+      apiKeyIv: encrypted?.iv ?? null,
+      apiKeyTag: encrypted?.tag ?? null,
       status: "pending",
       updatedAt: new Date(),
     })
@@ -133,6 +144,15 @@ export async function recordHealthCheck(
   return updated;
 }
 
+/** Stamps the connection's last successful data sync (any entity). */
+export async function touchLastSync(storeId: string): Promise<void> {
+  const now = new Date();
+  await db
+    .update(storeConnections)
+    .set({ lastSyncAt: now, updatedAt: now })
+    .where(eq(storeConnections.storeId, storeId));
+}
+
 /**
  * Disconnects a store: revokes the API key (clears all key material so it can
  * never be reused) and resets site metadata. The store must generate a new key
@@ -149,6 +169,10 @@ export async function disconnect(
       apiKeyHash: null,
       apiKeyPrefix: null,
       apiKeyGeneratedAt: null,
+      // Wipe outbound key material so no usable secret survives a disconnect.
+      apiKeyCipher: null,
+      apiKeyIv: null,
+      apiKeyTag: null,
       siteUrl: null,
       wpVersion: null,
       wcVersion: null,

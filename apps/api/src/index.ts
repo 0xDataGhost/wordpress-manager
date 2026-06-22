@@ -5,6 +5,7 @@ import { logger } from "./lib/logger";
 import { checkDatabaseConnection, closeDatabase } from "./db";
 import { checkRedisConnection, closeRedis } from "./redis";
 import { closeQueues } from "./queue";
+import { registerQueues } from "./queue/queues";
 
 /** Verifies critical dependencies before accepting traffic (fail fast). */
 async function verifyDependencies(): Promise<void> {
@@ -61,6 +62,10 @@ async function bootstrap(): Promise<void> {
     logger.error({ err }, "Dependency check failed at startup");
     process.exit(1);
   }
+
+  // Register the sync/publish queues as foundation (no workers consume them yet
+  // in this phase; manual sync and publish run synchronously).
+  registerQueues();
 
   const app = createApp();
   const server = app.listen(env.PORT, env.HOST, () => {

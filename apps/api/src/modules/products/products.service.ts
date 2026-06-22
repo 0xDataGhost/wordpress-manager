@@ -1,5 +1,5 @@
 import { and, count, desc, eq, ilike } from "drizzle-orm";
-import { db } from "../../db";
+import { db, type DbTransaction } from "../../db";
 import {
   products,
   type NewProductRow,
@@ -7,6 +7,8 @@ import {
 } from "../../db/schema/products";
 import { NotFoundError, ServiceUnavailableError } from "../../lib/errors";
 import { getConnectionByStoreId } from "../connections/connections.service";
+import { wpRequest } from "../connections/wp-client";
+import { upsertMapping } from "../sync/external-mappings.service";
 import { toWooPayload, type WooProductPayload } from "./products.serializer";
 import type {
   ConnectorProductInput,
@@ -156,13 +158,30 @@ export interface PublishResult {
   product: ProductRow;
   connectionStatus: string;
   wooPayload: WooProductPayload;
+  dispatched: boolean;
+  wpProductId: number | null;
+}
+
+/** Reads the wpProductId out of the connector's create/update product response. */
+function extractWpProductId(data: unknown): number | null {
+  if (data && typeof data === "object" && "wpProductId" in data) {
+    const value = (data as { wpProductId: unknown }).wpProductId;
+    const num = typeof value === "number" ? value : Number(value);
+    if (Number.isInteger(num) && num > 0) return num;
+  }
+  return null;
 }
 
 /**
- * Phase 5 publish foundation: validates tenant ownership and an active
- * WordPress connection, then builds the WooCommerce payload. Actual asynchronous
- * delivery to WooCommerce (the publish_product_to_wp job) lands in a later phase,
- * so nothing is dispatched here and lastSyncedAt is left untouched.
+ * Phase 6 publish completion: validates tenant ownership and an active
+ * WordPress connection, then DELIVERS the product to WooCommerce through the
+ * connector (create when unlinked, update when already linked). On success the
+ * returned WooCommerce product id is persisted on the catalog row, the external
+ * mapping is refreshed, lastSyncedAt is stamped, and dispatched is true.
+ *
+ * When outbound delivery is not available (CONNECTOR_ENCRYPTION_KEY unset on the
+ * server, or the store's key predates outbound support) wp-client throws a clear
+ * 503 telling the user how to enable it — we never silently report a fake success.
  */
 export async function publishProductToWp(
   storeId: string,
@@ -174,16 +193,44 @@ export async function publishProductToWp(
   }
 
   const connection = await getConnectionByStoreId(storeId);
-  if (!connection || connection.status !== "connected") {
+  if (!connection || connection.status !== "connected" || !connection.siteUrl) {
     throw new ServiceUnavailableError(
       "Store is not connected to WordPress. Connect the store before publishing.",
     );
   }
 
+  const wooPayload = toWooPayload(product);
+
+  // PUT to update an already-linked product, POST to create a new one.
+  const isUpdate = product.wpProductId !== null;
+  const result = await wpRequest(
+    connection,
+    isUpdate ? "PUT" : "POST",
+    isUpdate ? `products/${product.wpProductId}` : "products",
+    wooPayload,
+  );
+
+  if (!result.ok) {
+    throw new ServiceUnavailableError(
+      `Failed to publish to WooCommerce: ${result.message}`,
+    );
+  }
+
+  const wpProductId = extractWpProductId(result.data) ?? product.wpProductId;
+  if (!wpProductId) {
+    throw new ServiceUnavailableError(
+      "WooCommerce did not return a product id for the published product.",
+    );
+  }
+
+  const updated = await attachWpProductId(storeId, id, wpProductId);
+
   return {
-    product,
+    product: updated,
     connectionStatus: connection.status,
-    wooPayload: toWooPayload(product),
+    wooPayload,
+    dispatched: true,
+    wpProductId,
   };
 }
 
@@ -191,6 +238,81 @@ export interface ConnectorSyncResult {
   total: number;
   created: number;
   updated: number;
+}
+
+export interface ProductUpsertOutcome {
+  id: string;
+  created: boolean;
+}
+
+/**
+ * Upserts a single product keyed by wpProductId within the store and refreshes
+ * its external mapping, all inside the caller's transaction. Shared by the
+ * connector push (`/wp/products/sync`) and the dashboard pull sync so both paths
+ * stay idempotent and write identical mappings. Returns the local row id and
+ * whether it was newly created.
+ */
+export async function applyProductUpsert(
+  tx: DbTransaction,
+  storeId: string,
+  item: ConnectorProductInput,
+  now: Date = new Date(),
+): Promise<ProductUpsertOutcome> {
+  const [existing] = await tx
+    .select({ id: products.id })
+    .from(products)
+    .where(
+      and(
+        eq(products.storeId, storeId),
+        eq(products.wpProductId, item.wpProductId),
+      ),
+    )
+    .limit(1);
+
+  const fields = {
+    name: item.name,
+    description: item.description ?? null,
+    shortDescription: item.shortDescription ?? null,
+    price: item.price.toFixed(2),
+    stockQuantity: item.stockQuantity,
+    status: item.status,
+    imageUrl: item.imageUrl ?? null,
+    lastSyncedAt: now,
+  };
+
+  let id: string;
+  let created: boolean;
+  if (existing) {
+    await tx
+      .update(products)
+      .set({ ...fields, updatedAt: now })
+      .where(eq(products.id, existing.id));
+    id = existing.id;
+    created = false;
+  } else {
+    const [inserted] = await tx
+      .insert(products)
+      .values({ storeId, wpProductId: item.wpProductId, ...fields })
+      .returning({ id: products.id });
+    if (!inserted) {
+      throw new Error("Failed to insert synced product");
+    }
+    id = inserted.id;
+    created = true;
+  }
+
+  await upsertMapping(
+    tx,
+    {
+      storeId,
+      entityType: "product",
+      source: "woocommerce",
+      externalId: String(item.wpProductId),
+    },
+    id,
+  );
+
+  return { id, created };
 }
 
 /**
@@ -207,42 +329,42 @@ export async function upsertProductsFromConnector(
 
   await db.transaction(async (tx) => {
     for (const item of incoming) {
-      const [existing] = await tx
-        .select({ id: products.id })
-        .from(products)
-        .where(
-          and(
-            eq(products.storeId, storeId),
-            eq(products.wpProductId, item.wpProductId),
-          ),
-        )
-        .limit(1);
-
-      const fields = {
-        name: item.name,
-        description: item.description ?? null,
-        shortDescription: item.shortDescription ?? null,
-        price: item.price.toFixed(2),
-        stockQuantity: item.stockQuantity,
-        status: item.status,
-        imageUrl: item.imageUrl ?? null,
-        lastSyncedAt: now,
-      };
-
-      if (existing) {
-        await tx
-          .update(products)
-          .set({ ...fields, updatedAt: now })
-          .where(eq(products.id, existing.id));
-        updated += 1;
-      } else {
-        await tx
-          .insert(products)
-          .values({ storeId, wpProductId: item.wpProductId, ...fields });
-        created += 1;
-      }
+      const outcome = await applyProductUpsert(tx, storeId, item, now);
+      if (outcome.created) created += 1;
+      else updated += 1;
     }
   });
 
   return { total: incoming.length, created, updated };
+}
+
+/** Persists the wpProductId returned by WooCommerce after a successful publish. */
+export async function attachWpProductId(
+  storeId: string,
+  productId: string,
+  wpProductId: number,
+): Promise<ProductRow> {
+  const now = new Date();
+  const row = await db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(products)
+      .set({ wpProductId, lastSyncedAt: now, updatedAt: now })
+      .where(and(eq(products.storeId, storeId), eq(products.id, productId)))
+      .returning();
+    if (!updated) {
+      throw new NotFoundError("Product not found");
+    }
+    await upsertMapping(
+      tx,
+      {
+        storeId,
+        entityType: "product",
+        source: "woocommerce",
+        externalId: String(wpProductId),
+      },
+      productId,
+    );
+    return updated;
+  });
+  return row;
 }

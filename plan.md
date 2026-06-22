@@ -141,8 +141,8 @@ Do not build these in MVP:
 | 5 | Products Module | ✅ COMPLETED |
 | 5.1 | Products Module Foundation | ✅ COMPLETED |
 | 5.2 | Hardening: Real Connection Backend + Auth Rate Limiting | ✅ COMPLETED |
-| 6 | WooCommerce Sync Foundation | ⏭️ NEXT |
-| 7 | Orders Module | ⏳ PENDING |
+| 6 | WooCommerce Sync Foundation | ✅ COMPLETED |
+| 7 | Orders Module | ⏭️ NEXT |
 | 8 | Customers Module | ⏳ PENDING |
 | 9 | Dashboard Analytics | ⏳ PENDING |
 | 10 | Notifications Center | ⏳ PENDING |
@@ -625,11 +625,22 @@ import_products
 
 ---
 
-# Phase 6 — WooCommerce Sync Foundation ⏭️ NEXT
+# Phase 6 — WooCommerce Sync Foundation ✅ COMPLETED
+
+## Implementation Notes (completed)
+
+- **DB (migration 0003):** added `customers`, `orders`, `order_items`, `product_images`, `external_mappings`, `sync_jobs`, `webhook_events` (created only — no webhook processing yet), and extended `store_connections` with encrypted outbound-key columns (`api_key_cipher` / `api_key_iv` / `api_key_tag`) + `last_sync_at`.
+- **Generic `external_mappings`** (product/order/customer · source = woocommerce) is the idempotency backbone; unique on `(store_id, entity_type, source, external_id)`.
+- **Backend sync module** (`/sync/products|orders|customers|all` + `/sync/status`), JWT-protected, `settings.edit` to run / `settings.view` to read, tenant-scoped, Zod-validated. Sync pulls WooCommerce data from the connector and upserts idempotently.
+- **Outbound delivery (SaaS → WordPress):** the connector key is encrypted at rest (AES-256-GCM, `CONNECTOR_ENCRYPTION_KEY`) so the SaaS can sign requests the plugin verifies. Raw/encrypted key material is never exposed in any API response.
+- **Product publish completed:** `POST /products/:id/publish` now creates/updates the product in WooCommerce, stores the returned `wp_product_id`, refreshes the mapping, and returns `dispatched: true`.
+- **Connector plugin (v0.2.0):** signature-authenticated read endpoints (`/sync/products|orders|customers`), a Manual Sync button, and last-sync time. Stays a thin connector — all sync business logic lives in the SaaS.
+- **BullMQ:** queues `sync_products`, `sync_orders`, `sync_customers`, `sync_all`, `publish_product_to_wp` are registered as foundation; manual sync + publish run **synchronously** in this phase (no worker consumers yet).
+- **Not in this phase (deferred):** webhook processing (Phase 13), retry strategy, soft-delete strategy, Orders/Customers UI (Phases 7–8). Live WooCommerce round-trip was not exercised (no WP/Woo test environment); covered by structural tests instead.
 
 ## Goal
 
-Sync WooCommerce data (products, orders, customers) into the SaaS database. This is the **next phase** to implement. It also delivers the real product publish path deferred from Phase 5.
+Sync WooCommerce data (products, orders, customers) into the SaaS database. It also delivers the real product publish path deferred from Phase 5.
 
 ## Database Tables
 
@@ -1335,8 +1346,8 @@ Phase 4.5 — Dashboard Auth Integration & API Client   ✅ COMPLETED
 Phase 5   — Products Module                           ✅ COMPLETED
 Phase 5.1 — Products Module Foundation                ✅ COMPLETED
 Phase 5.2 — Hardening (Connection backend + rate limit) ✅ COMPLETED
-Phase 6   — WooCommerce Sync Foundation               ⏭️ NEXT
-Phase 7   — Orders Module                             ⏳ PENDING
+Phase 6   — WooCommerce Sync Foundation               ✅ COMPLETED
+Phase 7   — Orders Module                             ⏭️ NEXT
 Phase 8   — Customers Module                          ⏳ PENDING
 Phase 9   — Dashboard Analytics                       ⏳ PENDING
 Phase 10  — Notifications Center                      ⏳ PENDING

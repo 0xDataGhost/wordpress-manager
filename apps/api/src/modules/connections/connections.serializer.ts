@@ -17,6 +17,7 @@ export interface ConnectionStatusDto {
   lastConnectedAt: Date | null;
   lastHealthCheckAt: Date | null;
   lastHealthStatus: string | null;
+  lastSyncAt: Date | null;
   updatedAt: Date;
 }
 
@@ -36,6 +37,7 @@ export function toConnectionStatusDto(
     lastConnectedAt: row.lastConnectedAt,
     lastHealthCheckAt: row.lastHealthCheckAt,
     lastHealthStatus: row.lastHealthStatus,
+    lastSyncAt: row.lastSyncAt,
     updatedAt: row.updatedAt,
   };
 }
@@ -55,6 +57,7 @@ export function disconnectedStatusDto(storeId: string): ConnectionStatusDto {
     lastConnectedAt: null,
     lastHealthCheckAt: null,
     lastHealthStatus: null,
+    lastSyncAt: null,
     updatedAt: new Date(0),
   };
 }

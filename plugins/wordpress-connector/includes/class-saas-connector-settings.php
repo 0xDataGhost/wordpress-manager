@@ -30,6 +30,7 @@ class Saas_Connector_Settings {
 			'status'       => 'disconnected',
 			'store_name'   => '',
 			'last_checked' => '',
+			'last_synced'  => '',
 		);
 	}
 
@@ -87,6 +88,7 @@ class Saas_Connector_Settings {
 				'status'       => 'disconnected',
 				'store_name'   => '',
 				'last_checked' => '',
+				'last_synced'  => '',
 			)
 		);
 	}

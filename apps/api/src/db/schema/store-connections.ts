@@ -39,6 +39,18 @@ export const storeConnections = pgTable(
     apiKeyGeneratedAt: timestamp("api_key_generated_at", {
       withTimezone: true,
     }),
+    // Encrypted-at-rest copy of the FULL plaintext key, used ONLY to sign
+    // outbound SaaS -> WordPress requests (the connector verifies that signature
+    // with the same key). AES-256-GCM ciphertext, iv and auth tag are stored
+    // separately; all three are null when outbound delivery is not configured
+    // (CONNECTOR_ENCRYPTION_KEY unset) or the key was issued before this column
+    // existed. The inbound-verification hash above is still the source of truth
+    // for authenticating the connector; this is the reverse direction only.
+    apiKeyCipher: text("api_key_cipher"),
+    apiKeyIv: text("api_key_iv"),
+    apiKeyTag: text("api_key_tag"),
+    // Last successful data sync (any entity) with WooCommerce.
+    lastSyncAt: timestamp("last_sync_at", { withTimezone: true }),
     // Reported by the WordPress site on connect (sanitized client + server side).
     siteUrl: text("site_url"),
     wpVersion: text("wp_version"),

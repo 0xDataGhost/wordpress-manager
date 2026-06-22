@@ -26,6 +26,7 @@ class Saas_Connector_Admin {
 		add_action( 'admin_menu', array( $this, 'add_menu' ) );
 		add_action( 'admin_post_saas_connector_connect', array( $this, 'handle_connect' ) );
 		add_action( 'admin_post_saas_connector_health', array( $this, 'handle_health' ) );
+		add_action( 'admin_post_saas_connector_sync', array( $this, 'handle_sync' ) );
 		add_action( 'admin_post_saas_connector_disconnect', array( $this, 'handle_disconnect' ) );
 	}
 
@@ -57,6 +58,7 @@ class Saas_Connector_Admin {
 		$status       = Saas_Connector_Settings::get( 'status' );
 		$store_name   = Saas_Connector_Settings::get( 'store_name' );
 		$last_checked = Saas_Connector_Settings::get( 'last_checked' );
+		$last_synced  = Saas_Connector_Settings::get( 'last_synced' );
 		$connected    = Saas_Connector_Settings::is_connected();
 		$action_url   = esc_url( admin_url( 'admin-post.php' ) );
 
@@ -88,6 +90,12 @@ class Saas_Connector_Admin {
 				<tr>
 					<th scope="row"><?php esc_html_e( 'Last Checked', 'saas-connector' ); ?></th>
 					<td><?php echo esc_html( $last_checked ); ?></td>
+				</tr>
+				<?php endif; ?>
+				<?php if ( '' !== $last_synced ) : ?>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Last Synced', 'saas-connector' ); ?></th>
+					<td><?php echo esc_html( $last_synced ); ?></td>
 				</tr>
 				<?php endif; ?>
 			</table>
@@ -144,6 +152,11 @@ class Saas_Connector_Admin {
 					<input type="hidden" name="action" value="saas_connector_health" />
 					<?php wp_nonce_field( self::NONCE ); ?>
 					<?php submit_button( __( 'Run Health Check', 'saas-connector' ), 'secondary', 'submit', false ); ?>
+				</form>
+				<form method="post" action="<?php echo $action_url; // phpcs:ignore WordPress.Security.EscapeOutput -- pre-escaped above. ?>" style="display:inline">
+					<input type="hidden" name="action" value="saas_connector_sync" />
+					<?php wp_nonce_field( self::NONCE ); ?>
+					<?php submit_button( __( 'Manual Sync', 'saas-connector' ), 'secondary', 'submit', false, $connected ? array() : array( 'disabled' => 'disabled' ) ); ?>
 				</form>
 				<form method="post" action="<?php echo $action_url; // phpcs:ignore WordPress.Security.EscapeOutput -- pre-escaped above. ?>" style="display:inline">
 					<input type="hidden" name="action" value="saas_connector_disconnect" />
@@ -218,6 +231,41 @@ class Saas_Connector_Admin {
 		}
 
 		$this->redirect_with_notice( 'error', $result['message'] );
+	}
+
+	/**
+	 * Handle "Manual Sync": ask the SaaS to pull WooCommerce data via /wp/sync.
+	 * The SaaS performs the sync (pulling from this site's read endpoints) and
+	 * returns a summary; we record the time and surface the result.
+	 */
+	public function handle_sync() {
+		$this->guard();
+
+		$api_url = Saas_Connector_Settings::get( 'api_url' );
+		$api_key = Saas_Connector_Settings::get( 'api_key' );
+
+		if ( '' === $api_url || '' === $api_key ) {
+			$this->redirect_with_notice( 'error', __( 'Configure and connect the store first.', 'saas-connector' ) );
+		}
+
+		$result = Saas_Connector_Api_Client::sync( $api_url, $api_key, 'all' );
+
+		if ( $result['ok'] ) {
+			Saas_Connector_Settings::update( array( 'last_synced' => $this->now() ) );
+			$created = isset( $result['data']['job']['createdCount'] ) ? (int) $result['data']['job']['createdCount'] : 0;
+			$updated = isset( $result['data']['job']['updatedCount'] ) ? (int) $result['data']['job']['updatedCount'] : 0;
+			$this->redirect_with_notice(
+				'success',
+				sprintf(
+					/* translators: 1: created count, 2: updated count. */
+					__( 'Sync completed. %1$d created, %2$d updated.', 'saas-connector' ),
+					$created,
+					$updated
+				)
+			);
+		}
+
+		$this->redirect_with_notice( 'error', sanitize_text_field( (string) $result['message'] ) );
 	}
 
 	/**

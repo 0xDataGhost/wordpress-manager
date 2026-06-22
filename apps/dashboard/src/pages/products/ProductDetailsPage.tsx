@@ -72,11 +72,14 @@ export function ProductDetailsPage() {
     setPublishing(true);
     setBanner(null);
     try {
-      await publishProduct(id);
+      const result = await publishProduct(id);
+      // Reflect the WooCommerce id and refreshed sync time immediately.
+      setProduct(result.product);
       setBanner({
         tone: "success",
-        message:
-          "تم قبول طلب النشر. تسليم المنتج إلى ووكومرس يتم في مرحلة لاحقة.",
+        message: result.wpProductId
+          ? `تم نشر المنتج إلى ووكومرس بنجاح (المعرّف #${result.wpProductId}).`
+          : "تم نشر المنتج إلى ووكومرس بنجاح.",
       });
     } catch (err) {
       setBanner({

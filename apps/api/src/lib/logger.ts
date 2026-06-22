@@ -12,6 +12,12 @@ export const logger = pino({
       "*.token",
       "*.apiKey",
       "*.secret",
+      // Connector key material — last-line defense against accidental logging.
+      "*.plaintext",
+      "*.apiKeyHash",
+      "*.apiKeyCipher",
+      "*.apiKeyIv",
+      "*.apiKeyTag",
     ],
     censor: "[REDACTED]",
   },

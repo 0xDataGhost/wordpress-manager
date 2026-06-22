@@ -21,11 +21,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Saas_Connector_Products {
 
 	/**
-	 * Maximum allowed clock skew (seconds) between the signed timestamp and now.
-	 */
-	const MAX_TIMESTAMP_SKEW = 300;
-
-	/**
 	 * WooCommerce product statuses the SaaS may set.
 	 *
 	 * @var string[]
@@ -39,53 +34,7 @@ class Saas_Connector_Products {
 	 * @return true|WP_Error True when authorized, WP_Error otherwise.
 	 */
 	public function authorize( WP_REST_Request $request ) {
-		if ( ! class_exists( 'WooCommerce' ) ) {
-			return new WP_Error(
-				'woocommerce_inactive',
-				'WooCommerce is not active on this site.',
-				array( 'status' => 503 )
-			);
-		}
-
-		$secret = Saas_Connector_Settings::get( 'api_key' );
-		if ( '' === $secret ) {
-			return new WP_Error(
-				'not_configured',
-				'Connector is not configured with an API key.',
-				array( 'status' => 401 )
-			);
-		}
-
-		$signature = (string) $request->get_header( Saas_Connector_Signature::HEADER_SIGNATURE );
-		$timestamp = (string) $request->get_header( Saas_Connector_Signature::HEADER_TIMESTAMP );
-
-		if ( '' === $signature || '' === $timestamp ) {
-			return new WP_Error(
-				'missing_signature',
-				'Missing request signature headers.',
-				array( 'status' => 401 )
-			);
-		}
-
-		// Reject stale or future timestamps to limit replay.
-		if ( abs( time() - (int) $timestamp ) > self::MAX_TIMESTAMP_SKEW ) {
-			return new WP_Error(
-				'stale_signature',
-				'Request signature has expired.',
-				array( 'status' => 401 )
-			);
-		}
-
-		$body = $request->get_body();
-		if ( ! Saas_Connector_Signature::verify( $signature, $timestamp, $body, $secret ) ) {
-			return new WP_Error(
-				'invalid_signature',
-				'Request signature could not be verified.',
-				array( 'status' => 401 )
-			);
-		}
-
-		return true;
+		return Saas_Connector_Signature::authorize_rest( $request );
 	}
 
 	/**

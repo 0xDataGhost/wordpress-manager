@@ -6,6 +6,7 @@ import productRoutes from "../modules/products/products.routes";
 import roleRoutes from "../modules/roles/roles.routes";
 import storeRoutes from "../modules/stores/stores.routes";
 import wpRoutes from "../modules/connections/wp.routes";
+import syncRoutes from "../modules/sync/sync.routes";
 
 /**
  * Root API router, mounted under env.API_PREFIX (default /api/v1).
@@ -26,6 +27,7 @@ router.use("/auth", authRoutes);
 router.use("/stores", storeRoutes);
 router.use("/roles", roleRoutes);
 router.use("/products", productRoutes);
+router.use("/sync", syncRoutes);
 router.use("/wp", wpRoutes);
 
 export default router;

@@ -21,6 +21,71 @@ class Saas_Connector_Signature {
 	const HEADER_TIMESTAMP = 'X-Saas-Timestamp';
 
 	/**
+	 * Maximum allowed clock skew (seconds) between the signed timestamp and now.
+	 */
+	const MAX_TIMESTAMP_SKEW = 300;
+
+	/**
+	 * Shared REST permission callback: authenticate an inbound SaaS request by
+	 * verifying its HMAC signature against the stored connector API key, with a
+	 * timestamp window to limit replay. Used by both the product write endpoints
+	 * and the read endpoints the SaaS pulls during a manual sync.
+	 *
+	 * @param WP_REST_Request $request               Incoming request.
+	 * @param bool            $require_woocommerce    Require WooCommerce active.
+	 * @return true|WP_Error
+	 */
+	public static function authorize_rest( WP_REST_Request $request, $require_woocommerce = true ) {
+		if ( $require_woocommerce && ! class_exists( 'WooCommerce' ) ) {
+			return new WP_Error(
+				'woocommerce_inactive',
+				'WooCommerce is not active on this site.',
+				array( 'status' => 503 )
+			);
+		}
+
+		$secret = Saas_Connector_Settings::get( 'api_key' );
+		if ( '' === $secret ) {
+			return new WP_Error(
+				'not_configured',
+				'Connector is not configured with an API key.',
+				array( 'status' => 401 )
+			);
+		}
+
+		$signature = (string) $request->get_header( self::HEADER_SIGNATURE );
+		$timestamp = (string) $request->get_header( self::HEADER_TIMESTAMP );
+
+		if ( '' === $signature || '' === $timestamp ) {
+			return new WP_Error(
+				'missing_signature',
+				'Missing request signature headers.',
+				array( 'status' => 401 )
+			);
+		}
+
+		// Reject stale or future timestamps to limit replay.
+		if ( abs( time() - (int) $timestamp ) > self::MAX_TIMESTAMP_SKEW ) {
+			return new WP_Error(
+				'stale_signature',
+				'Request signature has expired.',
+				array( 'status' => 401 )
+			);
+		}
+
+		$body = $request->get_body();
+		if ( ! self::verify( $signature, $timestamp, $body, $secret ) ) {
+			return new WP_Error(
+				'invalid_signature',
+				'Request signature could not be verified.',
+				array( 'status' => 401 )
+			);
+		}
+
+		return true;
+	}
+
+	/**
 	 * Compute a base64 HMAC-SHA256 signature over a canonical message.
 	 *
 	 * The signed message binds the timestamp to the body so a captured signature

@@ -27,8 +27,16 @@ class Saas_Connector_Rest {
 	 */
 	private $products;
 
+	/**
+	 * Sync read endpoints handler.
+	 *
+	 * @var Saas_Connector_Sync
+	 */
+	private $sync;
+
 	public function __construct() {
 		$this->products = new Saas_Connector_Products();
+		$this->sync     = new Saas_Connector_Sync();
 	}
 
 	/**
@@ -76,6 +84,55 @@ class Saas_Connector_Rest {
 						},
 					),
 				),
+			)
+		);
+
+		// Read endpoints the SaaS pulls during a manual sync. Same signature auth
+		// as the write endpoints; these only read WooCommerce and return
+		// normalized, non-sensitive data.
+		$sync_args = array(
+			'page'     => array(
+				'validate_callback' => static function ( $value ) {
+					return is_numeric( $value );
+				},
+			),
+			'per_page' => array(
+				'validate_callback' => static function ( $value ) {
+					return is_numeric( $value );
+				},
+			),
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/sync/products',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this->sync, 'get_products' ),
+				'permission_callback' => array( $this->sync, 'authorize' ),
+				'args'                => $sync_args,
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/sync/orders',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this->sync, 'get_orders' ),
+				'permission_callback' => array( $this->sync, 'authorize' ),
+				'args'                => $sync_args,
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/sync/customers',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this->sync, 'get_customers' ),
+				'permission_callback' => array( $this->sync, 'authorize' ),
+				'args'                => $sync_args,
 			)
 		);
 	}

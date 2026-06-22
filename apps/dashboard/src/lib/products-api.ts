@@ -68,6 +68,8 @@ export interface ProductInput {
 export interface PublishResult {
   product: ProductDto;
   connectionStatus: string;
+  /** WooCommerce product id returned after a successful publish. */
+  wpProductId: number | null;
   dispatched: boolean;
 }
 

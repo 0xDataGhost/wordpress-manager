@@ -35,6 +35,18 @@ const envSchema = z.object({
     .transform((value) => value === "true"),
   AUTH_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(900),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
+  // Secret used to encrypt the connector API key at rest so the SaaS can sign
+  // outbound requests to WordPress (product publish + WooCommerce pull sync).
+  // Provide 32 bytes as 64 hex chars or base64. When unset, outbound delivery is
+  // disabled and publish/sync return a clear "not configured" error. Optional so
+  // the API still boots in environments that do not need outbound delivery.
+  CONNECTOR_ENCRYPTION_KEY: z.string().min(1).optional(),
+  // Timeout for outbound HTTP calls from the SaaS to a WordPress connector.
+  WP_HTTP_TIMEOUT_MS: z.coerce.number().int().positive().default(20_000),
+  // Page size used when pulling WooCommerce data during a manual sync.
+  SYNC_PAGE_SIZE: z.coerce.number().int().min(1).max(100).default(50),
+  // Safety cap on pages pulled per entity in one sync run (avoids unbounded loops).
+  SYNC_MAX_PAGES: z.coerce.number().int().min(1).max(1000).default(200),
 });
 
 const parsed = envSchema.safeParse(process.env);
