@@ -147,8 +147,8 @@ Do not build these in MVP:
 | 9 | Dashboard Analytics | ✅ COMPLETED |
 | 10 | Notifications Center | ✅ COMPLETED |
 | 11 | Automations MVP | ✅ COMPLETED |
-| 12 | Settings Module | ⏭️ NEXT |
-| 12.5 | AI Assistants | ⏳ PENDING |
+| 12 | Settings Module | ✅ COMPLETED |
+| 12.5 | AI Assistants | ⏭️ NEXT |
 | 13 | Webhooks & Incremental Sync | ⏳ PENDING |
 | 13.5 | Audit Logs | ⏳ PENDING |
 | 14 | QA, Permissions & Production Readiness | ⏳ PENDING |
@@ -1095,7 +1095,19 @@ send_whatsapp_order_message
 
 ---
 
-# Phase 12 — Settings Module ⏳ PENDING
+# Phase 12 — Settings Module ✅ COMPLETED
+
+## Implementation Notes (completed)
+
+> Scope was refined to a focused, generic per-store settings store (the plan's API-key/integrations/theme sketch is intentionally **not** part of this phase — API-key & connection management already shipped in Phase 5.2; WhatsApp/AI/webhook settings are explicitly out of scope).
+
+- **DB (migration 0009):** added one tenant-scoped `store_settings` table — `id`, `store_id` (unique FK→stores, cascade), `data` jsonb (default `'{}'`), timestamps. **Exactly one row per store** (unique `store_id`), lazily provisioned with safe defaults (store name seeded from the store record) on first read/update via `onConflictDoNothing`. Settings live in a single generic `data` jsonb so future phases can add keys/categories without a migration.
+- **Backend settings module** (`GET /settings`, `PATCH /settings`): JWT-protected, tenant-scoped by `storeId`, Zod-validated, mirroring the established module shape (schemas / serializer / service / controller / routes + unit tests). Four categories: **General** (store_name, company_name, support_email, support_phone, timezone), **Notifications** (enable_low_stock_notifications, enable_daily_reports, enable_failed_sync_notifications), **Dashboard** (default_date_range, dashboard_refresh_interval), **Branding** (logo_url, primary_color).
+- **Validation (strong):** email format + lowercase, IANA timezone validated via `Intl`, hex-color regex, URL for logo_url (URL only — no uploads), date-range enum, refresh-interval int 0–3600. Blank email/phone/logo coalesce to `null`. Partial updates: the patch merges onto the normalized current settings, then the **complete** result is re-validated before persisting, so a stored record is always complete + valid. Unknown categories/keys and empty bodies are rejected (400).
+- **Permissions:** `settings.view` for GET, `settings.edit` for PATCH — enforced by `requirePermission`. Both keys already existed in the RBAC catalog (owner = view+edit, manager = view-only); no seed change needed.
+- **Generic + reusable:** the settings store is automation-/feature-agnostic. The notification toggles are stored only and are **not** wired into existing business logic (no existing modules were modified) — future phases can read them.
+- **Frontend (Arabic RTL):** real `/settings` page replacing the placeholder — four sections (General / Notifications / Dashboard / Branding) built with React Hook Form + Zod resolver, inline field validation errors, a native color picker for the brand color, switches for the notification toggles, success/error feedback, and loading/error/no-access states (light + dark, mobile responsive). Edit controls are gated by `settings.edit` (view-only roles get disabled inputs + a read-only note). `settings-api.ts` client wired through `apiRequest`.
+- **Not in this phase (out of scope, deferred):** no file uploads (logo_url is a URL), no SMTP/email settings, no WhatsApp provider settings, no AI settings (Phase 12.5), no webhook settings (Phase 13), no audit logs (Phase 13.5), no system-wide admin settings, no theme-preference persistence.
 
 ## Goal
 
@@ -1405,8 +1417,8 @@ Phase 8   — Customers Module                          ✅ COMPLETED
 Phase 9   — Dashboard Analytics                       ✅ COMPLETED
 Phase 10  — Notifications Center                      ✅ COMPLETED
 Phase 11  — Automations MVP                           ✅ COMPLETED
-Phase 12  — Settings Module                           ⏭️ NEXT
-Phase 12.5— AI Assistants                             ⏳ PENDING
+Phase 12  — Settings Module                           ✅ COMPLETED
+Phase 12.5— AI Assistants                             ⏭️ NEXT
 Phase 13  — Webhooks & Incremental Sync               ⏳ PENDING
 Phase 13.5— Audit Logs                                ⏳ PENDING
 Phase 14  — QA, Permissions & Production Readiness    ⏳ PENDING

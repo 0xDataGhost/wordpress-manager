@@ -64,6 +64,13 @@
       "when": 1782191929477,
       "tag": "0008_secret_sleepwalker",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1782195010900,
+      "tag": "0009_equal_thunderbird",
+      "breakpoints": true
     }
   ]
 }
