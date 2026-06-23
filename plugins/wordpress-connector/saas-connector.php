@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       SaaS Connector
  * Plugin URI:        https://example.com/saas-connector
- * Description:        Connects this WooCommerce store to the SaaS Operations Dashboard. Connection management, health check, product publish, and manual WooCommerce sync (products, orders, customers).
- * Version:           0.2.0
+ * Description:        Connects this WooCommerce store to the SaaS Operations Dashboard. Connection management, health check, product publish, manual WooCommerce sync (products, orders, customers), and real-time webhooks for incremental sync.
+ * Version:           0.3.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            SaaS Dashboard
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'SAAS_CONNECTOR_VERSION', '0.2.0' );
+define( 'SAAS_CONNECTOR_VERSION', '0.3.0' );
 define( 'SAAS_CONNECTOR_PLUGIN_FILE', __FILE__ );
 define( 'SAAS_CONNECTOR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SAAS_CONNECTOR_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -27,8 +27,10 @@ define( 'SAAS_CONNECTOR_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 require_once SAAS_CONNECTOR_PLUGIN_DIR . 'includes/class-saas-connector-settings.php';
 require_once SAAS_CONNECTOR_PLUGIN_DIR . 'includes/class-saas-connector-signature.php';
 require_once SAAS_CONNECTOR_PLUGIN_DIR . 'includes/class-saas-connector-api-client.php';
+require_once SAAS_CONNECTOR_PLUGIN_DIR . 'includes/class-saas-connector-normalize.php';
 require_once SAAS_CONNECTOR_PLUGIN_DIR . 'includes/class-saas-connector-products.php';
 require_once SAAS_CONNECTOR_PLUGIN_DIR . 'includes/class-saas-connector-sync.php';
+require_once SAAS_CONNECTOR_PLUGIN_DIR . 'includes/class-saas-connector-webhooks.php';
 require_once SAAS_CONNECTOR_PLUGIN_DIR . 'includes/class-saas-connector-rest.php';
 require_once SAAS_CONNECTOR_PLUGIN_DIR . 'includes/class-saas-connector-admin.php';
 require_once SAAS_CONNECTOR_PLUGIN_DIR . 'includes/class-saas-connector.php';

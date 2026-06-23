@@ -47,6 +47,23 @@ export const AUTOMATION_JOB_NAMES = {
   sendWhatsappOrderMessage: "send_whatsapp_order_message",
 } as const;
 
+/**
+ * Phase 13 webhook job names. Incremental-sync webhooks reuse the existing
+ * per-entity sync queues (sync_products / sync_orders / sync_customers) rather
+ * than introducing new queues. Like the Phase 6 sync, processing currently runs
+ * SYNCHRONOUSLY inside the request (webhooks.service); there is no worker
+ * consuming these yet. The job names + `enqueueWebhookJob` helper are the seam a
+ * future worker will consume — inline processing intentionally does NOT enqueue,
+ * so swapping to a worker never double-processes an event.
+ */
+export const WEBHOOK_JOB_NAMES = {
+  processProductWebhook: "process_product_webhook",
+  processOrderWebhook: "process_order_webhook",
+  processCustomerWebhook: "process_customer_webhook",
+} as const;
+
+export type WebhookEntity = "product" | "order" | "customer";
+
 /** Maps a sync entity to its queue name. */
 const SYNC_QUEUE_BY_ENTITY: Record<
   "product" | "order" | "customer" | "all",
@@ -56,6 +73,13 @@ const SYNC_QUEUE_BY_ENTITY: Record<
   order: QUEUE_NAMES.syncOrders,
   customer: QUEUE_NAMES.syncCustomers,
   all: QUEUE_NAMES.syncAll,
+};
+
+/** Maps a webhook entity to the job name dispatched on its sync queue. */
+const WEBHOOK_JOB_BY_ENTITY: Record<WebhookEntity, string> = {
+  product: WEBHOOK_JOB_NAMES.processProductWebhook,
+  order: WEBHOOK_JOB_NAMES.processOrderWebhook,
+  customer: WEBHOOK_JOB_NAMES.processCustomerWebhook,
 };
 
 export interface SyncJobData {
@@ -108,6 +132,25 @@ export async function enqueuePublishProductJob(
   data: PublishProductJobData,
 ): Promise<void> {
   await getPublishQueue().add("publish_product_to_wp", data);
+}
+
+export interface WebhookJobData {
+  storeId: string;
+  /** The webhook_events row id a background run should process. */
+  webhookEventId: string;
+  entity: WebhookEntity;
+}
+
+/**
+ * Enqueues a webhook-processing job onto the entity's existing sync queue.
+ * Foundation only — Phase 13 processes webhooks inline, so this is not called on
+ * the request path; it is the seam a future worker will consume.
+ */
+export async function enqueueWebhookJob(
+  entity: WebhookEntity,
+  data: WebhookJobData,
+): Promise<void> {
+  await getSyncQueue(entity).add(WEBHOOK_JOB_BY_ENTITY[entity], data);
 }
 
 /* --------------------------- Phase 11 automations ------------------------- */

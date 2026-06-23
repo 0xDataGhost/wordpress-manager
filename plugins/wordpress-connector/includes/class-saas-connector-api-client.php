@@ -38,9 +38,10 @@ class Saas_Connector_Api_Client {
 	 * @param string               $api_key Connector API key.
 	 * @param string               $path    Endpoint path (e.g. "wp/connect").
 	 * @param array<string,mixed>  $body    JSON body.
+	 * @param int                  $timeout Request timeout in seconds.
 	 * @return array{ok:bool,code:int,data:mixed,message:string}
 	 */
-	private static function post( $api_url, $api_key, $path, array $body ) {
+	private static function post( $api_url, $api_key, $path, array $body, $timeout = 20 ) {
 		$url = self::build_url( $api_url, $path );
 		if ( '' === $url ) {
 			return self::failure( 0, __( 'SaaS API URL is not configured.', 'saas-connector' ) );
@@ -60,7 +61,7 @@ class Saas_Connector_Api_Client {
 		$response = wp_remote_post(
 			$url,
 			array(
-				'timeout' => 20,
+				'timeout' => (int) $timeout,
 				'headers' => $headers,
 				'body'    => $json,
 			)
@@ -137,6 +138,24 @@ class Saas_Connector_Api_Client {
 	 */
 	public static function sync( $api_url, $api_key, $entity = 'all' ) {
 		return self::post( $api_url, $api_key, 'wp/sync', array( 'entity' => $entity ) );
+	}
+
+	/**
+	 * Deliver a real-time webhook to the SaaS (Phase 13 incremental sync).
+	 *
+	 * POSTs a normalized event envelope to wp/webhooks/{entity}. Uses a shorter
+	 * timeout than connect/sync so a WooCommerce save is never blocked for long,
+	 * and returns the result so the caller can log a delivery failure. The SaaS
+	 * authenticates via the bearer API key and dedupes on the envelope's eventId.
+	 *
+	 * @param string              $api_url Base API URL.
+	 * @param string              $api_key Connector API key.
+	 * @param string              $entity  One of products|orders|customers.
+	 * @param array<string,mixed> $payload Normalized event envelope.
+	 * @return array{ok:bool,code:int,data:mixed,message:string}
+	 */
+	public static function send_webhook( $api_url, $api_key, $entity, array $payload ) {
+		return self::post( $api_url, $api_key, 'wp/webhooks/' . $entity, $payload, 10 );
 	}
 
 	/**

@@ -32,6 +32,11 @@ class Saas_Connector {
 	private $rest;
 
 	/**
+	 * @var Saas_Connector_Webhooks
+	 */
+	private $webhooks;
+
+	/**
 	 * Get the shared instance.
 	 *
 	 * @return Saas_Connector
@@ -44,8 +49,9 @@ class Saas_Connector {
 	}
 
 	private function __construct() {
-		$this->admin = new Saas_Connector_Admin();
-		$this->rest  = new Saas_Connector_Rest();
+		$this->admin    = new Saas_Connector_Admin();
+		$this->rest     = new Saas_Connector_Rest();
+		$this->webhooks = new Saas_Connector_Webhooks();
 	}
 
 	/**
@@ -53,6 +59,9 @@ class Saas_Connector {
 	 */
 	public function init() {
 		$this->rest->register();
+		// Outbound webhooks must run on every surface (admin, REST, cron,
+		// front-end checkout), not just wp-admin — register unconditionally.
+		$this->webhooks->register();
 		if ( is_admin() ) {
 			$this->admin->register();
 		}

@@ -59,6 +59,31 @@ logic and does **not** sync products, orders, or customers yet (Phase 5).
 The endpoint is intentionally public (the SaaS calls it without a WordPress
 login) and returns only non-sensitive status. It never exposes the API key.
 
+## Real-time webhooks (Phase 13)
+
+In addition to manual sync, the connector forwards real-time changes to the SaaS
+so products, orders, and customers stay current without pressing **Manual Sync**.
+It hooks a small, fixed set of WooCommerce/WordPress actions and POSTs a
+normalized event envelope to the SaaS webhook endpoints (bearer + HMAC signed,
+same auth as the other connector calls):
+
+| WordPress/WooCommerce action    | Event topic        | SaaS endpoint              |
+| ------------------------------- | ------------------ | -------------------------- |
+| `woocommerce_update_product`    | `product.updated`  | `POST /wp/webhooks/products`  |
+| `woocommerce_product_set_stock` | `product.updated`  | `POST /wp/webhooks/products`  |
+| `woocommerce_new_order`         | `order.created`    | `POST /wp/webhooks/orders`    |
+| `woocommerce_update_order`      | `order.updated`    | `POST /wp/webhooks/orders`    |
+| `user_register`                 | `customer.created` | `POST /wp/webhooks/customers` |
+| `profile_update`                | `customer.updated` | `POST /wp/webhooks/customers` |
+
+Each envelope carries `event`, an `eventId` idempotency key, `externalId`, an
+`occurredAt` timestamp, and a normalized `data` object identical to the
+manual-sync shape. The connector stays thin: it only detects the change and
+fires one HTTP POST — all upsert/dedup logic lives on the SaaS, which records
+every event and ignores duplicate deliveries. Customer hooks fire only for users
+with the WooCommerce `customer` role. Delivery is best-effort with no advanced
+retry; failures are logged when `WP_DEBUG` is enabled.
+
 ## Security
 
 - **Capability checks**: the admin page and every action require `manage_options`.
@@ -96,13 +121,16 @@ wordpress-connector/
     class-saas-connector.php                 # Core singleton, hook wiring
     class-saas-connector-settings.php        # wp_options storage (autoload off)
     class-saas-connector-admin.php           # Admin page, actions, security
-    class-saas-connector-rest.php            # GET /wp-json/saas/v1/health
+    class-saas-connector-rest.php            # Health + product write + sync read routes
+    class-saas-connector-products.php        # SaaS-driven product create/update
+    class-saas-connector-sync.php            # Read endpoints the SaaS pulls during sync
+    class-saas-connector-normalize.php       # Shared WooCommerce -> SaaS shaping
+    class-saas-connector-webhooks.php        # Real-time event sender (Phase 13)
     class-saas-connector-api-client.php      # Calls SaaS connector endpoints
     class-saas-connector-signature.php       # HMAC signing/verification helper
 ```
 
-## Not in this phase
+## Not in scope
 
-- Product / order / customer sync (Phase 5)
-- WooCommerce webhooks (Phase 13)
-- Any business logic inside WordPress
+- Any business logic inside WordPress (the SaaS owns all sync/upsert logic)
+- Advanced webhook retry / queueing (best-effort delivery only)

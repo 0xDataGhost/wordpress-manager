@@ -117,7 +117,7 @@ Do not build these in MVP:
 
 ---
 
-# Implementation Status (as of 2026-06-23)
+# Implementation Status (as of 2026-06-24)
 
 > This snapshot reflects the actual approved implementation and is the source of truth for what is built versus pending. Phase ordering was revised: the **Products Module now ships before WooCommerce Sync**.
 
@@ -149,8 +149,8 @@ Do not build these in MVP:
 | 11 | Automations MVP | ✅ COMPLETED |
 | 12 | Settings Module | ✅ COMPLETED |
 | 12.5 | AI Assistants | ✅ COMPLETED |
-| 13 | Webhooks & Incremental Sync | ⏭️ NEXT |
-| 13.5 | Audit Logs | ⏳ PENDING |
+| 13 | Webhooks & Incremental Sync | ✅ COMPLETED |
+| 13.5 | Audit Logs | ⏭️ NEXT |
 | 14 | QA, Permissions & Production Readiness | ⏳ PENDING |
 
 ## Known Deferrals Within Completed Phases
@@ -1212,7 +1212,22 @@ generate_ai_description
 
 ---
 
-# Phase 13 — Webhooks & Incremental Sync ⏳ PENDING
+# Phase 13 — Webhooks & Incremental Sync ✅ COMPLETED
+
+## Implementation Notes (completed)
+
+- **No schema/migration changes:** reuses the `webhook_events` table created (but not processed) in Phase 6. Its `(store_id, source, external_event_id)` partial-unique index is the event-level idempotency backbone; the per-entity `external_mappings` / `wp_*_id` unique indexes remain the data-level idempotency backbone.
+- **Backend `webhooks` module** (`webhooks.schemas.ts` / `serializer` / `service` / `controller` / `routes` + unit tests), mirroring the established module shape. Endpoints mounted under `/wp/webhooks`:
+  - `POST /wp/webhooks/products` · `POST /wp/webhooks/orders` · `POST /wp/webhooks/customers` — **connector-authenticated** (`authenticateConnector`, the same bearer API-key mechanism as `/wp/sync` and `/wp/products/sync`); tenant resolved + scoped from the key.
+  - `GET /wp/webhooks` — **JWT** (`settings.view`) read-only status surface listing recent events for the store (payload omitted from the DTO).
+- **Supported event types:** `product.created` / `product.updated` / `product.deleted`, `order.created` / `order.updated`, `customer.created` / `customer.updated`. Each endpoint's Zod schema constrains events to its entity family; `data` is required for create/update and optional for `product.deleted`. The `data` payload is the **same normalized shape as the manual-sync schemas**, so webhook processing reuses the exact idempotent upsert path (`upsertProductsFromWoo` / `upsertOrdersFromWoo` / `upsertCustomersFromWoo`). `product.deleted` archives the local row via the existing `archived` status (no new soft-delete strategy).
+- **Idempotency (two layers):** (1) the event is inserted with `onConflictDoNothing` on the unique delivery index — a re-delivered `eventId` is recorded once and **not reprocessed**; (2) every upsert keys on the WooCommerce id, so even a fresh-`eventId` redelivery can never create duplicate product/order/customer rows. Status flows `received → processed | failed`; a failed event is recorded with its error and `processed_at` before the request fails (never silently swallowed) for later replay.
+- **Security / tenant isolation:** connector auth resolves `storeId` from the API key; every query (record, dedup lookup, upsert, archive, list) filters by `storeId`. No cross-store leakage; the GET status route additionally enforces `settings.view`. Webhook payloads are external data — fully Zod-validated at the boundary (invalid → 400 before any record).
+- **BullMQ:** extended `queues.ts` with job names `process_product_webhook` / `process_order_webhook` / `process_customer_webhook` reusing the existing `sync_products` / `sync_orders` / `sync_customers` queues, plus an `enqueueWebhookJob` helper. Like Phase 6 sync, processing runs **synchronously inline** for the MVP — the queue/job foundation is the seam for a future worker; inline processing intentionally does **not** enqueue so swapping to a worker never double-processes.
+- **WordPress connector plugin (v0.3.0):** added `Saas_Connector_Normalize` (shared WooCommerce→SaaS shaping, also refactored the sync read endpoints onto it — DRY) and `Saas_Connector_Webhooks`, which hooks `woocommerce_update_product`, `woocommerce_product_set_stock`, `woocommerce_new_order`, `woocommerce_update_order`, `user_register`, `profile_update` and POSTs a normalized envelope (`event`, `eventId` idempotency key, `externalId`, `occurredAt`, `data`) via a new `Api_Client::send_webhook` (bearer + HMAC signed, short timeout). Stays a thin connector — detect change, fire one POST; all upsert/dedup logic lives on the SaaS. Customer hooks fire only for the WooCommerce `customer` role. Best-effort delivery, no advanced retry; failures logged under `WP_DEBUG`.
+- **Manual sync, product publish, and the products/orders/customers pages were not modified** — webhooks share the same idempotent upsert helpers, so manual sync keeps working and repeated webhook delivery produces no duplicates.
+- **Not in this phase (out of scope, per the brief):** no Phase 13.5 Audit Logs, no advanced retry/queueing strategy, no new soft-delete strategy, no real WhatsApp/email, no automation/notification triggering from webhooks (kept to incremental sync), and no dashboard UI changes (the JWT status endpoint is backend-only, available for a future status display).
+- **Testing:** API typecheck / lint / build green; 147 unit tests pass (13 new for webhook schemas + serializer). Dashboard build / lint green (untouched). PHP lint green on all plugin files. Live HTTP smoke test (in-process, no DB) confirmed all four routes are mounted and auth-gated (401 on missing/invalid connector key and JWT; 404 on unknown sub-path). **Not live-tested:** no PostgreSQL/Redis or WooCommerce environment is available here, so the full connector-authenticated round-trip (real upsert, `webhook_events` row creation, duplicate-ignore, failed-event recording, tenant isolation) was verified structurally via the schemas/serializer tests and code-level store-scoping + unique-index guarantees rather than against a running stack.
 
 ## Goal
 
@@ -1431,8 +1446,8 @@ Phase 10  — Notifications Center                      ✅ COMPLETED
 Phase 11  — Automations MVP                           ✅ COMPLETED
 Phase 12  — Settings Module                           ✅ COMPLETED
 Phase 12.5— AI Assistants                             ✅ COMPLETED
-Phase 13  — Webhooks & Incremental Sync               ⏭️ NEXT
-Phase 13.5— Audit Logs                                ⏳ PENDING
+Phase 13  — Webhooks & Incremental Sync               ✅ COMPLETED
+Phase 13.5— Audit Logs                                ⏭️ NEXT
 Phase 14  — QA, Permissions & Production Readiness    ⏳ PENDING
 ```
 

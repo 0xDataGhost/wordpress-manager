@@ -8,6 +8,7 @@ import { syncProductsHandler } from "../products/products.controller";
 import { connectorSyncSchema } from "../products/products.schemas";
 import { wpTriggerSyncHandler } from "../sync/sync.controller";
 import { wpSyncTriggerSchema } from "../sync/sync.schemas";
+import webhookRoutes from "../webhooks/webhooks.routes";
 import {
   connectionStatus,
   wpConnect,
@@ -45,6 +46,10 @@ router.post(
   validate({ body: wpSyncTriggerSchema }),
   asyncHandler(wpTriggerSyncHandler),
 );
+
+// Real-time incremental sync. Connector-authenticated POST endpoints
+// (/webhooks/products|orders|customers) plus a JWT status endpoint live here.
+router.use("/webhooks", webhookRoutes);
 
 // Dashboard-authenticated endpoint (JWT). Scoped to the token's store.
 router.get(
