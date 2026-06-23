@@ -23,3 +23,4 @@ export * from "./order-items";
 export * from "./external-mappings";
 export * from "./sync-jobs";
 export * from "./webhook-events";
+export * from "./notifications";

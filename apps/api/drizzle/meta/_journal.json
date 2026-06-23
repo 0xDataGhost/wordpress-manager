@@ -50,6 +50,13 @@
       "when": 1782171088055,
       "tag": "0006_orders_customer_index",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1782188932106,
+      "tag": "0007_notifications",
+      "breakpoints": true
     }
   ]
 }

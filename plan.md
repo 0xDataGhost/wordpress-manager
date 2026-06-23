@@ -145,8 +145,8 @@ Do not build these in MVP:
 | 7 | Orders Module | ✅ COMPLETED |
 | 8 | Customers Module | ✅ COMPLETED |
 | 9 | Dashboard Analytics | ✅ COMPLETED |
-| 10 | Notifications Center | ⏭️ NEXT |
-| 11 | Automations MVP | ⏳ PENDING |
+| 10 | Notifications Center | ✅ COMPLETED |
+| 11 | Automations MVP | ⏭️ NEXT |
 | 12 | Settings Module | ⏳ PENDING |
 | 12.5 | AI Assistants | ⏳ PENDING |
 | 13 | Webhooks & Incremental Sync | ⏳ PENDING |
@@ -938,7 +938,16 @@ GET /dashboard/low-stock
 
 ---
 
-# Phase 10 — Notifications Center ⏳ PENDING
+# Phase 10 — Notifications Center ✅ COMPLETED
+
+## Implementation Notes (completed)
+
+- **DB (migration 0007):** added a generic, tenant-scoped `notifications` table (`id`, `store_id`, `type`, `title`, `message`, `severity`, `read_at`, `metadata` jsonb, `created_at`, `updated_at`). `type` and `severity` stay free text backed by canonical lists (`NOTIFICATION_TYPES`: new_order / low_stock / failed_sync / failed_automation / daily_report; `NOTIFICATION_SEVERITIES`: info / success / warning / error) so future automations can write rows without a schema change. Two indexes: `notifications_store_created_idx` (store_id, created_at, id) backs the list + deterministic newest-first sort; partial `notifications_store_unread_idx` backs the unread count/filter.
+- **Backend notifications module** (`/notifications`, `/notifications/:id/read`, `/notifications/read-all`): JWT-protected, tenant-scoped by `storeId`, Zod-validated, mirroring the Customers/Orders module shape (schemas / serializer / service / controller / routes + unit tests). List supports a read/unread filter and pagination, returns a store-wide `unreadCount` (independent of the filter) for the topbar badge, and is ordered `created_at desc, id desc`. Mark-as-read is idempotent (`coalesce(read_at, now())`). Read-all only touches the caller's store.
+- **Permission:** every route requires `dashboard.view` (held by all seeded roles) — per the Phase 10 spec, notifications are visible to anyone who can view the dashboard; the same permission gates the mark-read actions since they only touch the caller's own store data.
+- **Frontend (Arabic RTL):** real `/notifications` page replacing the placeholder — card list with severity accent bar + colored severity badge, Arabic type label, unread dot indicator, created date, per-item "تحديد كمقروء", a "تحديد الكل كمقروء" action, a الكل/غير المقروءة/المقروءة filter, pagination, and loading/empty/error states (light + dark). Added a topbar bell with an unread-count badge that refreshes on mount and on route change (no realtime/polling). `notifications-api.ts` client wired through `apiRequest`.
+- **Generic + reusable:** the table/module are intentionally automation-agnostic — Phase 11 automations (low-stock alerts, daily reports, failed-automation/sync messages) can insert notifications directly with no further schema work.
+- **Not in this phase (out of scope, deferred):** no automations / job queues / WhatsApp / email / daily-report generation / low-stock automation / webhooks; notifications are manually seeded for testing. Sync behavior was not modified.
 
 ## Goal
 
@@ -1383,8 +1392,8 @@ Phase 6   — WooCommerce Sync Foundation               ✅ COMPLETED
 Phase 7   — Orders Module                             ✅ COMPLETED
 Phase 8   — Customers Module                          ✅ COMPLETED
 Phase 9   — Dashboard Analytics                       ✅ COMPLETED
-Phase 10  — Notifications Center                      ⏭️ NEXT
-Phase 11  — Automations MVP                           ⏳ PENDING
+Phase 10  — Notifications Center                      ✅ COMPLETED
+Phase 11  — Automations MVP                           ⏭️ NEXT
 Phase 12  — Settings Module                           ⏳ PENDING
 Phase 12.5— AI Assistants                             ⏳ PENDING
 Phase 13  — Webhooks & Incremental Sync               ⏳ PENDING

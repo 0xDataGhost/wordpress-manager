@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MobileSidebar } from "@/components/layout/MobileSidebar";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -33,6 +34,7 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-1.5">
+        <NotificationBell />
         <ThemeToggle />
 
         <DropdownMenu>

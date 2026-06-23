@@ -16,6 +16,7 @@ import { OrdersListPage } from "@/pages/orders/OrdersListPage";
 import { OrderDetailsPage } from "@/pages/orders/OrderDetailsPage";
 import { CustomersListPage } from "@/pages/customers/CustomersListPage";
 import { CustomerDetailsPage } from "@/pages/customers/CustomerDetailsPage";
+import { NotificationsListPage } from "@/pages/notifications/NotificationsListPage";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 
@@ -48,12 +49,9 @@ export function AppRoutes() {
           />
           <Route
             path="/automations"
-            element={<PlaceholderPage title="الأتمتة" phase="المرحلة 10" />}
+            element={<PlaceholderPage title="الأتمتة" phase="المرحلة 11" />}
           />
-          <Route
-            path="/notifications"
-            element={<PlaceholderPage title="الإشعارات" phase="المرحلة 11" />}
-          />
+          <Route path="/notifications" element={<NotificationsListPage />} />
           <Route path="/connection" element={<ConnectionPage />} />
           <Route
             path="/settings"

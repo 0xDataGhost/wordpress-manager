@@ -6,6 +6,7 @@ import productRoutes from "../modules/products/products.routes";
 import orderRoutes from "../modules/orders/orders.routes";
 import customerRoutes from "../modules/customers/customers.routes";
 import dashboardRoutes from "../modules/dashboard/dashboard.routes";
+import notificationRoutes from "../modules/notifications/notifications.routes";
 import roleRoutes from "../modules/roles/roles.routes";
 import storeRoutes from "../modules/stores/stores.routes";
 import wpRoutes from "../modules/connections/wp.routes";
@@ -33,6 +34,7 @@ router.use("/products", productRoutes);
 router.use("/orders", orderRoutes);
 router.use("/customers", customerRoutes);
 router.use("/dashboard", dashboardRoutes);
+router.use("/notifications", notificationRoutes);
 router.use("/sync", syncRoutes);
 router.use("/wp", wpRoutes);
 
