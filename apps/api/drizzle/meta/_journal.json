@@ -57,6 +57,13 @@
       "when": 1782188932106,
       "tag": "0007_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1782191929477,
+      "tag": "0008_secret_sleepwalker",
+      "breakpoints": true
     }
   ]
 }

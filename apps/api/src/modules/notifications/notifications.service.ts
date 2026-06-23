@@ -7,6 +7,44 @@ import {
 import { NotFoundError } from "../../lib/errors";
 import type { ListNotificationsQuery } from "./notifications.schemas";
 
+export interface CreateNotificationInput {
+  storeId: string;
+  type: string;
+  title: string;
+  message: string;
+  /** One of NOTIFICATION_SEVERITIES; defaults to "info". */
+  severity?: string;
+  /** Optional structured payload (order id, product ids, counts, …). */
+  metadata?: unknown;
+}
+
+/**
+ * Inserts a store-scoped notification and returns the created row. The generic
+ * insert seam Phase 10 left for automations (low-stock alerts, daily reports,
+ * failed-automation messages) to write notifications without touching the
+ * notifications table directly. Every caller MUST pass the tenant's storeId.
+ */
+export async function createNotification(
+  input: CreateNotificationInput,
+): Promise<NotificationRow> {
+  const [created] = await db
+    .insert(notifications)
+    .values({
+      storeId: input.storeId,
+      type: input.type,
+      title: input.title,
+      message: input.message,
+      severity: input.severity ?? "info",
+      metadata: input.metadata ?? null,
+    })
+    .returning();
+
+  if (!created) {
+    throw new Error("Failed to create notification");
+  }
+  return created;
+}
+
 export interface ListNotificationsResult {
   items: NotificationRow[];
   total: number;

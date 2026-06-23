@@ -146,8 +146,8 @@ Do not build these in MVP:
 | 8 | Customers Module | ✅ COMPLETED |
 | 9 | Dashboard Analytics | ✅ COMPLETED |
 | 10 | Notifications Center | ✅ COMPLETED |
-| 11 | Automations MVP | ⏭️ NEXT |
-| 12 | Settings Module | ⏳ PENDING |
+| 11 | Automations MVP | ✅ COMPLETED |
+| 12 | Settings Module | ⏭️ NEXT |
 | 12.5 | AI Assistants | ⏳ PENDING |
 | 13 | Webhooks & Incremental Sync | ⏳ PENDING |
 | 13.5 | Audit Logs | ⏳ PENDING |
@@ -993,7 +993,18 @@ POST  /notifications/read-all
 
 ---
 
-# Phase 11 — Automations MVP ⏳ PENDING
+# Phase 11 — Automations MVP ✅ COMPLETED
+
+## Implementation Notes (completed)
+
+- **DB (migration 0008):** added two tenant-scoped tables. `automations` (`id`, `store_id`, `type`, `enabled`, `config` jsonb, timestamps) with a unique `(store_id, type)` index — each store has exactly one row per type, lazily provisioned with defaults (disabled) on first read/run via `onConflictDoNothing`. `automation_logs` (`id`, `store_id`, `automation_id`, `type`, `status`, `message`, `metadata` jsonb, `created_at`) with an index on `(store_id, automation_id, created_at, id)` backing the newest-first logs list. `type` and `status` stay free text backed by canonical lists (`AUTOMATION_TYPES`, `AUTOMATION_LOG_STATUSES`: success / skipped / queued / failed).
+- **Backend automations module** (`/automations`, `/automations/:id`, `/automations/:id/logs`): JWT-protected, tenant-scoped by `storeId`, Zod-validated, mirroring the Notifications/Customers module shape (config / schemas / serializer / service / controller / routes + unit tests). Per-type config is validated against a strict per-type Zod schema (`low_stock_alert {threshold}`, `daily_sales_report {time HH:MM}`, `whatsapp_order_message {message_template}`); partial config updates merge onto the normalized stored config so rows stay complete and valid.
+- **Permissions:** `automations.view` for list + logs, `automations.edit` for PATCH — enforced by `requirePermission`. Both keys already existed in the RBAC catalog (owner/manager = view+edit, marketer = view-only) so no seed change was needed.
+- **Run helpers (manual execution):** `runLowStockCheck`, `runDailySalesReport`, `runWhatsappOrderMessage` are the bodies a BullMQ worker would run. Disabled automations are skipped (logged). Low stock finds active products at/under the configured threshold and raises a `low_stock` notification. Daily report computes today's (UTC) paid sales total, order count, top products, and current low-stock count, then raises a `daily_report` notification. WhatsApp renders the template for an order, enqueues a placeholder job, and raises a notification stating a message *would* be sent — **no real WhatsApp/email is ever sent**. Failures write a `failed` log + a `failed_automation` notification. A standalone runner (`src/scripts/run-automation.ts`, `npm run automations:run`) invokes them safely while no worker exists yet.
+- **Notifications integration:** added a reusable `createNotification(input)` seam to the Phase 10 notifications service (the generic insert Phase 10 anticipated); every automation writes notifications through it. Confirmed live: notifications appear in the notifications center and topbar badge.
+- **BullMQ:** registered queues `automation`, `notification`, `report`, `whatsapp` and job names `low_stock_check`, `send_daily_report`, `send_whatsapp_order_message` as foundation (registered at boot, observable). Like Phase 6 sync, there is **no worker consuming them yet** — run helpers execute synchronously; the WhatsApp helper enqueues a real placeholder job (verified present in Redis: `bull:whatsapp:wait`) to demonstrate the "queued after a new order" path.
+- **Frontend (Arabic RTL):** real `/automations` page replacing the placeholder — three automation cards (icon chip + title + description), an enabled toggle that persists immediately, a per-type config editor (threshold number input / time input / message-template textarea) with a Save button, an on-demand recent-logs panel (status badge + message + date), and loading/error/empty states (light + dark, mobile responsive). A dependency-free RTL-aware `Switch` component was added. Edit controls are gated by `automations.edit` (view-only roles get disabled inputs + a read-only note). `automations-api.ts` client wired through `apiRequest`.
+- **Not in this phase (out of scope, deferred):** no real WhatsApp/Chatwoot/email, no WhatsApp provider integration, no workflow/advanced automation builder, no AI, no webhooks, no Settings, and no automation worker consumers (queues are foundation only). The plan's "WhatsApp message after a new order" trigger is foundation-only because order creation arrives via webhooks (Phase 13).
 
 ## Goal
 
@@ -1393,8 +1404,8 @@ Phase 7   — Orders Module                             ✅ COMPLETED
 Phase 8   — Customers Module                          ✅ COMPLETED
 Phase 9   — Dashboard Analytics                       ✅ COMPLETED
 Phase 10  — Notifications Center                      ✅ COMPLETED
-Phase 11  — Automations MVP                           ⏭️ NEXT
-Phase 12  — Settings Module                           ⏳ PENDING
+Phase 11  — Automations MVP                           ✅ COMPLETED
+Phase 12  — Settings Module                           ⏭️ NEXT
 Phase 12.5— AI Assistants                             ⏳ PENDING
 Phase 13  — Webhooks & Incremental Sync               ⏳ PENDING
 Phase 13.5— Audit Logs                                ⏳ PENDING

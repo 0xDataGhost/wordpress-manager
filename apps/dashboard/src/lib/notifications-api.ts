@@ -20,7 +20,8 @@ export type NotificationType =
   | "low_stock"
   | "failed_sync"
   | "failed_automation"
-  | "daily_report";
+  | "daily_report"
+  | "whatsapp_order_message";
 
 /** Severity drives the badge tone + card accent. */
 export type NotificationSeverity = "info" | "success" | "warning" | "error";

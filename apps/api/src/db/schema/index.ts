@@ -24,3 +24,5 @@ export * from "./external-mappings";
 export * from "./sync-jobs";
 export * from "./webhook-events";
 export * from "./notifications";
+export * from "./automations";
+export * from "./automation-logs";
