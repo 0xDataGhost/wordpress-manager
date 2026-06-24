@@ -21,9 +21,17 @@ type Props = {
   revealedKey: string | null;
   onGenerate: () => void;
   generating: boolean;
+  /** Whether the user may generate/rotate the key (settings.edit). */
+  canManage: boolean;
 };
 
-export function ApiKeyCard({ status, revealedKey, onGenerate, generating }: Props) {
+export function ApiKeyCard({
+  status,
+  revealedKey,
+  onGenerate,
+  generating,
+  canManage,
+}: Props) {
   const [copied, setCopied] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const hasKey = status.hasApiKey;
@@ -99,10 +107,16 @@ export function ApiKeyCard({ status, revealedKey, onGenerate, generating }: Prop
           <p className="text-sm text-muted-foreground">لم يتم توليد مفتاح بعد.</p>
         )}
 
-        <Button onClick={requestGenerate} disabled={generating}>
-          <KeyRound />
-          {hasKey ? "إعادة توليد المفتاح" : "توليد مفتاح API"}
-        </Button>
+        {canManage ? (
+          <Button onClick={requestGenerate} disabled={generating}>
+            <KeyRound />
+            {hasKey ? "إعادة توليد المفتاح" : "توليد مفتاح API"}
+          </Button>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            تحتاج صلاحية «تعديل الإعدادات» لتوليد مفتاح API.
+          </p>
+        )}
       </CardContent>
 
       <ConfirmDialog

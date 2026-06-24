@@ -84,6 +84,17 @@ export const orders = pgTable(
     storeCustomerIdx: index("orders_store_customer_idx")
       .on(table.storeId, table.customerId)
       .where(sql`${table.customerId} is not null`),
+    // Backs the general tenant listing (store_id + date sort). The partial
+    // customer index above excludes guest orders, so it cannot serve the list.
+    storeCreatedIdx: index("orders_store_created_idx").on(
+      table.storeId,
+      table.createdAt,
+    ),
+    // Backs the status filter on the orders list.
+    storeStatusIdx: index("orders_store_status_idx").on(
+      table.storeId,
+      table.status,
+    ),
   }),
 );
 

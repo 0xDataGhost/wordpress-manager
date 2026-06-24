@@ -7,6 +7,7 @@ import { SearchInput } from "@/components/shared/SearchInput";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { DataTable, type Column } from "@/components/shared/DataTable";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { PRODUCT_STATUS_META } from "@/components/products/product-status";
 import {
   listProducts,
@@ -34,6 +35,8 @@ function formatPrice(price: string): string {
 
 export function ProductsListPage() {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission("products.create");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ProductStatus | "all">("all");
@@ -147,12 +150,14 @@ export function ProductsListPage() {
         title="المنتجات"
         description="أدر كتالوج منتجاتك: أضف منتجات جديدة، عدّلها، وتابع حالتها."
         actions={
-          <Button asChild>
-            <Link to="/products/new">
-              <Plus className="h-4 w-4" />
-              منتج جديد
-            </Link>
-          </Button>
+          canCreate ? (
+            <Button asChild>
+              <Link to="/products/new">
+                <Plus className="h-4 w-4" />
+                منتج جديد
+              </Link>
+            </Button>
+          ) : null
         }
       />
 

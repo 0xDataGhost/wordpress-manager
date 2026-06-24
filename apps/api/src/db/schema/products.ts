@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  index,
   integer,
   numeric,
   pgTable,
@@ -53,6 +54,18 @@ export const products = pgTable(
     storeWpProductUnique: uniqueIndex("products_store_wp_product_unique")
       .on(table.storeId, table.wpProductId)
       .where(sql`${table.wpProductId} is not null`),
+    // Backs the primary tenant listing (store_id + newest-first sort). The
+    // partial unique index above excludes catalog-only drafts, so it cannot
+    // serve the general list; this non-partial index covers every product.
+    storeCreatedIdx: index("products_store_created_idx").on(
+      table.storeId,
+      table.createdAt,
+    ),
+    // Backs the status filter on the products list.
+    storeStatusIdx: index("products_store_status_idx").on(
+      table.storeId,
+      table.status,
+    ),
   }),
 );
 

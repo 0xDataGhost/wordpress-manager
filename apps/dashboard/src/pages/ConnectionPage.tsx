@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
+import { ShieldAlert } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { ConnectionStatusCard } from "@/components/connection/ConnectionStatusCard";
 import { ApiKeyCard } from "@/components/connection/ApiKeyCard";
 import { ConnectStoreCard } from "@/components/connection/ConnectStoreCard";
 import { SyncCard } from "@/components/connection/SyncCard";
+import { useAuth } from "@/components/auth/AuthProvider";
 import {
   disconnectStore,
   fetchConnectionStatus,
@@ -16,6 +19,10 @@ import {
 type Action = "generate" | "disconnect" | "refresh";
 
 export function ConnectionPage() {
+  const { hasPermission } = useAuth();
+  const canView = hasPermission("settings.view");
+  const canManage = hasPermission("settings.edit");
+
   const [status, setStatus] = useState<ConnectionStatusDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -37,8 +44,12 @@ export function ConnectionPage() {
   }, []);
 
   useEffect(() => {
+    if (!canView) {
+      setLoading(false);
+      return;
+    }
     void load();
-  }, [load]);
+  }, [canView, load]);
 
   async function run(
     kind: Action,
@@ -88,7 +99,13 @@ export function ConnectionPage() {
         description="اربط متجر ووكومرس بلوحة التحكم عبر إضافة الموصّل. ولّد مفتاح API، أدخله في ووردبريس، ثم تابع حالة الاتصال من هنا."
       />
 
-      {loading ? (
+      {!canView ? (
+        <EmptyState
+          icon={ShieldAlert}
+          title="لا تملك صلاحية الوصول"
+          description="تحتاج صلاحية «عرض الإعدادات» للاطّلاع على هذه الصفحة."
+        />
+      ) : loading ? (
         <LoadingState />
       ) : loadError || !status ? (
         <ErrorState
@@ -118,11 +135,13 @@ export function ConnectionPage() {
               revealedKey={revealedKey}
               onGenerate={handleGenerate}
               generating={action === "generate"}
+              canManage={canManage}
             />
             <ConnectStoreCard
               status={status}
               onDisconnect={handleDisconnect}
               disconnecting={action === "disconnect"}
+              canManage={canManage}
             />
           </div>
 

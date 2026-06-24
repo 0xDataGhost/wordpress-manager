@@ -1,4 +1,4 @@
-import { pgTable, primaryKey, uuid } from "drizzle-orm/pg-core";
+import { index, pgTable, primaryKey, uuid } from "drizzle-orm/pg-core";
 import { permissions } from "./permissions";
 import { roles } from "./roles";
 
@@ -15,6 +15,12 @@ export const rolePermissions = pgTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.roleId, table.permissionId] }),
+    // Backs the reverse "which roles grant permission X?" lookup and the
+    // ON DELETE CASCADE check when a permission is removed. The composite PK
+    // already covers role_id as its leading column.
+    permissionIdx: index("role_permissions_permission_idx").on(
+      table.permissionId,
+    ),
   }),
 );
 

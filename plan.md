@@ -151,7 +151,7 @@ Do not build these in MVP:
 | 12.5 | AI Assistants | ✅ COMPLETED |
 | 13 | Webhooks & Incremental Sync | ✅ COMPLETED |
 | 13.5 | Audit Logs | ✅ COMPLETED |
-| 14 | QA, Permissions & Production Readiness | ⏭️ NEXT |
+| 14 | QA, Permissions & Production Readiness | ✅ COMPLETED |
 
 ## Known Deferrals Within Completed Phases
 
@@ -1327,7 +1327,18 @@ GET /audit-logs
 
 ---
 
-# Phase 14 — QA, Permissions & Production Readiness ⏳ PENDING
+# Phase 14 — QA, Permissions & Production Readiness ✅ COMPLETED
+
+## Implementation Notes (completed)
+
+- **Project-wide audit (read-only first, fix second):** six areas (Security, Database, Backend, Frontend, Performance, Production Readiness) across all 15 modules. Every finding was verified against the actual code before any change; some were reclassified after verification (e.g. the webhook "missing transaction" downgraded from Critical to Low — the two-layer idempotency makes corruption impossible). **0 Critical, 10 High, 31 Medium, 15 Low.** Full results in [production-readiness-report.md](production-readiness-report.md).
+- **Verified correct (no change):** tenant isolation (every query store-scoped), RBAC (`requirePermission` on every route), JWT (alg-pinned, rotating refresh + reuse detection), secret handling (hashed/encrypted, shown-once), central error handler (no prod leakage), schema/migration consistency (22 tables, clean 0000→0011 chain), RTL (100% logical properties), dark mode (fully tokenized), loading/empty/error states (universal). 
+- **Fixes applied (17 issues / 11 change-sets):** (1) CORS prod guard — API refuses to boot with `CORS_ORIGIN=*` in production; (2) API-appropriate CSP + Permissions-Policy headers; (3) logger redaction for `passwordHash`/`accessToken`/`refreshToken`; (4) **migration 0011** adds 13 missing indexes (`order_items` had none; non-partial tenant-listing indexes for products/orders/customers; FK/cascade-support indexes); (5) products list `id` tiebreaker for stable pagination; (6) shared `escapeLike` helper (`lib/sql.ts`); (7) **frontend permission gating** — products write controls, connection page actions, and sidebar nav now gate on the same permission the backend enforces; (8) **route code-splitting** (`React.lazy` + `Suspense` + vendor `manualChunks`) — the single 510KB chunk and its >500KB warning are gone; (9) completed `.env.example` (Dashboard/AI vars).
+- **Documented as debt (not fixed, with rationale):** `drizzle-orm`/`tar` advisories (not exploitable here — scheduled upgrade), sync-engine N+1 (post-MVP worker; mitigated by 0011 + pilot scale), WP plaintext key (structural), webhook HMAC replay verification, forgot/reset-password flow (Phase 3 gap, needs email infra), and assorted micro-optimizations. The PAID-vs-REVENUE status difference is **intentional** per Phase 8/9 and was left as-is.
+- **Verification (all green):** API typecheck / lint / build; **156/156 unit tests**; Dashboard lint / build (no bundle warning); PHP lint on all 12 plugin files (no plugin files were modified this phase). Dashboard rendering confirmed in-browser (login page, RTL + dark toggle, zero console errors). No DB/Redis/live WooCommerce environment here, so authenticated round-trips were verified structurally (tests + code-level store-scoping/permission guards) per prior phases.
+- **Deliverables:** [production-readiness-report.md](production-readiness-report.md), [deployment-checklist.md](deployment-checklist.md), [environment-reference.md](environment-reference.md).
+- **Outcome:** **0 Critical**, no code-level blockers. **GO (conditional)** for a first controlled pilot with one real WooCommerce store — conditions are deployment configuration (explicit CORS origin, strong JWT secrets, `CONNECTOR_ENCRYPTION_KEY`, run migrations through 0011, HTTPS, PostgreSQL backups). Security score 82/100, production readiness 85/100, MVP ~97% complete.
+- **Out of scope (honored):** no new features, no new modules, no Phase 15, no speculative refactors; tenant isolation, RBAC, and API backward compatibility preserved throughout.
 
 ## Goal
 
@@ -1461,7 +1472,7 @@ Phase 12  — Settings Module                           ✅ COMPLETED
 Phase 12.5— AI Assistants                             ✅ COMPLETED
 Phase 13  — Webhooks & Incremental Sync               ✅ COMPLETED
 Phase 13.5— Audit Logs                                ✅ COMPLETED
-Phase 14  — QA, Permissions & Production Readiness    ⏭️ NEXT
+Phase 14  — QA, Permissions & Production Readiness    ✅ COMPLETED
 ```
 
 > Note: Products Module (Phase 5) was intentionally built before WooCommerce Sync (Phase 6) so the dashboard had a working product surface and publish foundation first.

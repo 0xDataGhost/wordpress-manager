@@ -1,8 +1,10 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ShieldAlert } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/components/auth/AuthProvider";
 import {
   ProductForm,
   type ProductFormValues,
@@ -23,6 +25,8 @@ function toInput(values: ProductFormValues) {
 
 export function ProductCreatePage() {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission("products.create");
 
   async function handleSubmit(values: ProductFormValues) {
     const created = await createProduct(toInput(values));
@@ -42,15 +46,23 @@ export function ProductCreatePage() {
         }
       />
 
-      <Card className="max-w-3xl">
-        <CardContent className="pt-6">
-          <ProductForm
-            submitLabel="حفظ المنتج"
-            onSubmit={handleSubmit}
-            onCancel={() => navigate("/products")}
-          />
-        </CardContent>
-      </Card>
+      {!canCreate ? (
+        <EmptyState
+          icon={ShieldAlert}
+          title="لا تملك صلاحية الوصول"
+          description="تحتاج صلاحية «إنشاء المنتجات» لإضافة منتج جديد."
+        />
+      ) : (
+        <Card className="max-w-3xl">
+          <CardContent className="pt-6">
+            <ProductForm
+              submitLabel="حفظ المنتج"
+              onSubmit={handleSubmit}
+              onCancel={() => navigate("/products")}
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

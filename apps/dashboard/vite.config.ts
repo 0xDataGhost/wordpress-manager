@@ -12,4 +12,16 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Split stable third-party code into its own long-cached chunks so app
+        // updates don't force users to re-download React/Radix/form libraries.
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          "vendor-form": ["react-hook-form", "@hookform/resolvers", "zod"],
+        },
+      },
+    },
+  },
 });

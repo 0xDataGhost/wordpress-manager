@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  index,
   integer,
   pgTable,
   text,
@@ -43,6 +44,12 @@ export const productImages = pgTable(
     productWpImageUnique: uniqueIndex("product_images_product_wp_image_unique")
       .on(table.productId, table.wpImageId)
       .where(sql`${table.wpImageId} is not null`),
+    // Backs the per-product gallery fetch ordered by position. The partial
+    // unique index above excludes manually-added images (null wp_image_id).
+    productIdx: index("product_images_product_idx").on(
+      table.productId,
+      table.position,
+    ),
   }),
 );
 

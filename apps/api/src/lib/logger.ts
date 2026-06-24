@@ -9,7 +9,10 @@ export const logger = pino({
       "req.headers.authorization",
       "req.headers.cookie",
       "*.password",
+      "*.passwordHash",
       "*.token",
+      "*.accessToken",
+      "*.refreshToken",
       "*.apiKey",
       "*.secret",
       // Connector key material — last-line defense against accidental logging.

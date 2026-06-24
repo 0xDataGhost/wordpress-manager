@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ShieldAlert } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/components/auth/AuthProvider";
 import {
   ProductForm,
   type ProductFormValues,
@@ -27,6 +29,8 @@ function toDefaults(product: ProductDto): Partial<ProductFormValues> {
 export function ProductEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission("products.edit");
   const [product, setProduct] = useState<ProductDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -45,8 +49,12 @@ export function ProductEditPage() {
   }, [id]);
 
   useEffect(() => {
+    if (!canEdit) {
+      setLoading(false);
+      return;
+    }
     void load();
-  }, [load]);
+  }, [canEdit, load]);
 
   async function handleSubmit(values: ProductFormValues) {
     if (!id) return;
@@ -78,7 +86,13 @@ export function ProductEditPage() {
         }
       />
 
-      {loading ? (
+      {!canEdit ? (
+        <EmptyState
+          icon={ShieldAlert}
+          title="لا تملك صلاحية الوصول"
+          description="تحتاج صلاحية «تعديل المنتجات» لتحرير هذا المنتج."
+        />
+      ) : loading ? (
         <LoadingState />
       ) : error || !product ? (
         <ErrorState

@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { index, pgTable, timestamp, uuid } from "drizzle-orm/pg-core";
 import { stores } from "./stores";
 import { users } from "./users";
@@ -27,6 +28,11 @@ export const refreshTokens = pgTable(
   },
   (table) => ({
     userIdx: index("refresh_tokens_user_idx").on(table.userId),
+    // Backs the ON DELETE CASCADE check when a store is deleted. Partial: most
+    // tokens carry a store, platform-level tokens leave it null.
+    storeIdx: index("refresh_tokens_store_idx")
+      .on(table.storeId)
+      .where(sql`${table.storeId} is not null`),
   }),
 );
 

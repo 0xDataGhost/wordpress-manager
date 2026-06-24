@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  index,
   integer,
   numeric,
   pgTable,
@@ -57,6 +58,12 @@ export const customers = pgTable(
     storeWpCustomerUnique: uniqueIndex("customers_store_wp_customer_unique")
       .on(table.storeId, table.wpCustomerId)
       .where(sql`${table.wpCustomerId} is not null`),
+    // Backs the primary tenant listing (store_id + newest-first sort). The
+    // partial unique index above cannot serve the general list.
+    storeCreatedIdx: index("customers_store_created_idx").on(
+      table.storeId,
+      table.createdAt,
+    ),
   }),
 );
 

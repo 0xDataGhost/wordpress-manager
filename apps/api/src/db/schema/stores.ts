@@ -1,5 +1,6 @@
 import {
   boolean,
+  index,
   pgTable,
   text,
   timestamp,
@@ -29,6 +30,9 @@ export const stores = pgTable(
   },
   (table) => ({
     slugUnique: uniqueIndex("stores_slug_unique").on(table.slug),
+    // Backs "which stores does this user own?" and the ON DELETE RESTRICT
+    // check enforced when a user is deleted.
+    ownerUserIdx: index("stores_owner_user_idx").on(table.ownerUserId),
   }),
 );
 

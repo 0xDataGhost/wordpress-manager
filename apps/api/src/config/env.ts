@@ -78,6 +78,18 @@ export const isProduction = env.NODE_ENV === "production";
 export const isDevelopment = env.NODE_ENV === "development";
 export const isTest = env.NODE_ENV === "test";
 
+// Production startup guard: a wildcard CORS origin combined with
+// `credentials: true` lets ANY website make credentialed requests on behalf of
+// a logged-in user (the `cors` package reflects the request Origin rather than
+// sending `*`). Refuse to boot in production with an open origin — set
+// CORS_ORIGIN to an explicit comma-separated allowlist instead.
+if (isProduction && env.CORS_ORIGIN === "*") {
+  console.error(
+    "Invalid configuration: CORS_ORIGIN must be an explicit origin allowlist in production (wildcard '*' is not allowed with credentialed requests).",
+  );
+  process.exit(1);
+}
+
 /** Allowed CORS origins resolved to a value the `cors` package understands. */
 export const corsOrigin: true | string[] =
   env.CORS_ORIGIN === "*"

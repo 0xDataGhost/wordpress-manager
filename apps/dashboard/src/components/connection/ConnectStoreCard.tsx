@@ -22,9 +22,16 @@ type Props = {
   status: ConnectionStatusDto;
   onDisconnect: () => void;
   disconnecting: boolean;
+  /** Whether the user may disconnect the store (settings.edit). */
+  canManage: boolean;
 };
 
-export function ConnectStoreCard({ status, onDisconnect, disconnecting }: Props) {
+export function ConnectStoreCard({
+  status,
+  onDisconnect,
+  disconnecting,
+  canManage,
+}: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const isDisconnected = status.status === "disconnected";
 
@@ -56,7 +63,7 @@ export function ConnectStoreCard({ status, onDisconnect, disconnecting }: Props)
           </div>
         ) : null}
 
-        {!isDisconnected ? (
+        {!isDisconnected && canManage ? (
           <Button
             type="button"
             variant="destructive"

@@ -1,5 +1,6 @@
 import {
   boolean,
+  index,
   pgTable,
   timestamp,
   uniqueIndex,
@@ -32,6 +33,9 @@ export const storeUsers = pgTable(
       table.storeId,
       table.userId,
     ),
+    // Backs "which stores does this user belong to?" and the ON DELETE CASCADE
+    // check when a user is deleted (user_id is the non-leading column above).
+    userIdx: index("store_users_user_idx").on(table.userId),
   }),
 );
 

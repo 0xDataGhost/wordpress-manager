@@ -4,12 +4,8 @@ import { customers, type CustomerRow } from "../../db/schema/customers";
 import { orderItems, type OrderItemRow } from "../../db/schema/order-items";
 import { orders, type OrderRow } from "../../db/schema/orders";
 import { NotFoundError } from "../../lib/errors";
+import { escapeLike } from "../../lib/sql";
 import type { ListOrdersQuery, UpdateOrderNotesInput } from "./orders.schemas";
-
-/** Escapes LIKE wildcards so user search text matches literally. */
-function escapeLike(value: string): string {
-  return value.replace(/[\\%_]/g, (char) => `\\${char}`);
-}
 
 /**
  * Effective order date: the WooCommerce placed-at when known, otherwise our

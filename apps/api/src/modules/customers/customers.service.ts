@@ -3,6 +3,7 @@ import { db } from "../../db";
 import { customers, type CustomerRow } from "../../db/schema/customers";
 import { orders, type OrderRow } from "../../db/schema/orders";
 import { NotFoundError } from "../../lib/errors";
+import { escapeLike } from "../../lib/sql";
 import type { CustomerMetricsDto } from "./customers.serializer";
 import type {
   ListCustomersQuery,
@@ -19,11 +20,6 @@ const RECENT_ORDERS_LIMIT = 20;
  * spent. Order *count* and first/last order dates still span every status.
  */
 const PAID_ORDER_STATUSES = ["completed", "processing"] as const;
-
-/** Escapes LIKE wildcards so user search text matches literally. */
-function escapeLike(value: string): string {
-  return value.replace(/[\\%_]/g, (char) => `\\${char}`);
-}
 
 /** Effective order date: WooCommerce placed-at when known, else our created-at. */
 const orderDate = sql`coalesce(${orders.placedAt}, ${orders.createdAt})`;

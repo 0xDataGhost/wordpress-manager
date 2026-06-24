@@ -7,6 +7,7 @@ import { ErrorState } from "@/components/shared/ErrorState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/components/auth/AuthProvider";
 import {
   Card,
   CardContent,
@@ -42,6 +43,9 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
 export function ProductDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission("products.edit");
+  const canArchive = hasPermission("products.delete");
   const [product, setProduct] = useState<ProductDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -144,30 +148,42 @@ export function ProductDetailsPage() {
             </div>
           ) : null}
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button asChild>
-              <Link to={`/products/${product.id}/edit`}>
-                <Pencil className="h-4 w-4" />
-                تعديل
-              </Link>
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => void handlePublish()}
-              disabled={publishing}
-            >
-              <UploadCloud className="h-4 w-4" />
-              نشر إلى ووكومرس
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setArchiveOpen(true)}
-              disabled={product.status === "archived"}
-            >
-              <Archive className="h-4 w-4" />
-              أرشفة
-            </Button>
-          </div>
+          {canEdit || canArchive ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {canEdit ? (
+                <>
+                  <Button asChild>
+                    <Link to={`/products/${product.id}/edit`}>
+                      <Pencil className="h-4 w-4" />
+                      تعديل
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => void handlePublish()}
+                    disabled={publishing}
+                  >
+                    <UploadCloud className="h-4 w-4" />
+                    نشر إلى ووكومرس
+                  </Button>
+                </>
+              ) : null}
+              {canArchive ? (
+                <Button
+                  variant="outline"
+                  onClick={() => setArchiveOpen(true)}
+                  disabled={product.status === "archived"}
+                >
+                  <Archive className="h-4 w-4" />
+                  أرشفة
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              لديك صلاحية العرض فقط لهذا المنتج.
+            </p>
+          )}
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Card className="lg:col-span-2">

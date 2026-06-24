@@ -19,7 +19,29 @@ export function createApp(): Express {
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
 
-  app.use(helmet());
+  // This service only ever returns JSON, so lock the browser down hard: nothing
+  // should be loadable from API responses and the API must never be framed.
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        useDefaults: false,
+        directives: {
+          "default-src": ["'none'"],
+          "frame-ancestors": ["'none'"],
+          "base-uri": ["'none'"],
+          "form-action": ["'none'"],
+        },
+      },
+    }),
+  );
+  // Disable powerful browser features for any document served from this origin.
+  app.use((_req, res, next) => {
+    res.setHeader(
+      "Permissions-Policy",
+      "camera=(), microphone=(), geolocation=()",
+    );
+    next();
+  });
   app.use(cors({ origin: corsOrigin, credentials: true }));
   app.use(compression());
   app.use(express.json({ limit: "1mb" }));

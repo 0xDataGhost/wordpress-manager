@@ -1,4 +1,10 @@
-import { pgTable, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  index,
+  pgTable,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { roles } from "./roles";
 import { stores } from "./stores";
 import { users } from "./users";
@@ -27,6 +33,12 @@ export const userRoles = pgTable(
   (table) => ({
     userStoreRoleUnique: uniqueIndex("user_roles_user_store_role_unique").on(
       table.userId,
+      table.storeId,
+      table.roleId,
+    ),
+    // Backs "who in this store has role X?" (role management) and the store /
+    // role cascade checks (store_id + role_id are non-leading above).
+    storeRoleIdx: index("user_roles_store_role_idx").on(
       table.storeId,
       table.roleId,
     ),

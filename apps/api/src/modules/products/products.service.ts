@@ -6,6 +6,7 @@ import {
   type ProductRow,
 } from "../../db/schema/products";
 import { NotFoundError, ServiceUnavailableError } from "../../lib/errors";
+import { escapeLike } from "../../lib/sql";
 import { getConnectionByStoreId } from "../connections/connections.service";
 import { wpRequest } from "../connections/wp-client";
 import { upsertMapping } from "../sync/external-mappings.service";
@@ -16,11 +17,6 @@ import type {
   ListProductsQuery,
   UpdateProductInput,
 } from "./products.schemas";
-
-/** Escapes LIKE wildcards so user search text matches literally. */
-function escapeLike(value: string): string {
-  return value.replace(/[\\%_]/g, (char) => `\\${char}`);
-}
 
 export interface ListProductsResult {
   items: ProductRow[];
@@ -49,7 +45,9 @@ export async function listProducts(
       .select()
       .from(products)
       .where(whereClause)
-      .orderBy(desc(products.createdAt))
+      // id tiebreaker keeps pagination stable when rows share a createdAt
+      // (common right after a batch sync), matching the other list modules.
+      .orderBy(desc(products.createdAt), desc(products.id))
       .limit(query.limit)
       .offset(offset),
     db.select({ value: count() }).from(products).where(whereClause),

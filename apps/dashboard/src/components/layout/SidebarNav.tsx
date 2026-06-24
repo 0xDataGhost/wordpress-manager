@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { navItems } from "@/lib/navigation";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { cn } from "@/lib/utils";
 
 type SidebarNavProps = {
@@ -8,12 +9,19 @@ type SidebarNavProps = {
 };
 
 export function SidebarNav({ onNavigate }: SidebarNavProps) {
+  const { hasPermission } = useAuth();
+  // Hide links the user has no permission for so restricted roles never see
+  // dead-end navigation (the destination pages also guard themselves).
+  const visibleItems = navItems.filter(
+    (item) => !item.permission || hasPermission(item.permission),
+  );
+
   return (
     <nav
       aria-label="القائمة الرئيسية"
       className="scrollbar-thin flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4"
     >
-      {navItems.map((item) => (
+      {visibleItems.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}

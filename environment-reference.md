@@ -1,0 +1,126 @@
+# Environment Reference
+
+Authoritative list of every environment variable, derived from the validated schema in `apps/api/src/config/env.ts` and the dashboard client. All API variables are validated by Zod at startup — an invalid or missing **required** value causes a **fail-fast exit** before the server listens.
+
+Legend: **Required** = boot fails if missing · **Optional** = has a safe default · type/bounds enforced by Zod.
+
+---
+
+## API (`apps/api`)
+
+### Application
+
+| Variable | Req | Default | Bounds / Notes |
+|---|---|---|---|
+| `NODE_ENV` | Optional | `development` | `development` \| `test` \| `production` |
+| `PORT` | Optional | `4000` | positive int |
+| `HOST` | Optional | `0.0.0.0` | non-empty |
+| `API_PREFIX` | Optional | `/api/v1` | must start with `/`. `/health` is always at root |
+| `LOG_LEVEL` | Optional | `info` | `fatal\|error\|warn\|info\|debug\|trace\|silent` |
+
+### CORS
+
+| Variable | Req | Default | Bounds / Notes |
+|---|---|---|---|
+| `CORS_ORIGIN` | Optional | `*` | Comma-separated allowlist, or `*`. ⚠️ **In `production`, `*` is rejected at startup** (wildcard + credentials is unsafe). Set the explicit dashboard origin(s). |
+
+### PostgreSQL
+
+| Variable | Req | Default | Bounds / Notes |
+|---|---|---|---|
+| `DATABASE_URL` | **Required** | — | `postgresql://…` connection string |
+| `DB_POOL_MAX` | Optional | `10` | positive int — max pool connections |
+| `DB_CONNECTION_TIMEOUT_MS` | Optional | `10000` | positive int — acquire timeout |
+| `DB_IDLE_TIMEOUT_MS` | Optional | `30000` | ≥0 — idle release (0 disables) |
+
+### Redis (shared by cache + BullMQ)
+
+| Variable | Req | Default | Bounds / Notes |
+|---|---|---|---|
+| `REDIS_URL` | **Required** | — | `redis://…` connection string |
+
+### Authentication
+
+| Variable | Req | Default | Bounds / Notes |
+|---|---|---|---|
+| `BCRYPT_ROUNDS` | Optional | `12` | int 10–15 |
+| `JWT_ACCESS_SECRET` | **Required** | — | ≥32 chars. `openssl rand -hex 32` |
+| `JWT_REFRESH_SECRET` | **Required** | — | ≥32 chars, distinct from access. `openssl rand -hex 32` |
+| `JWT_ACCESS_EXPIRES_IN` | Optional | `15m` | non-empty (e.g. `15m`) |
+| `JWT_REFRESH_EXPIRES_IN` | Optional | `7d` | non-empty (e.g. `7d`) |
+
+### Auth rate limiting (Redis fixed-window, fail-open)
+
+| Variable | Req | Default | Bounds / Notes |
+|---|---|---|---|
+| `AUTH_RATE_LIMIT_ENABLED` | Optional | `true` | `true` \| `false` — applies to login/register/refresh |
+| `AUTH_RATE_LIMIT_WINDOW_SECONDS` | Optional | `900` | positive int |
+| `AUTH_RATE_LIMIT_MAX` | Optional | `10` | positive int — requests per window before 429 |
+
+### WooCommerce sync & outbound delivery
+
+| Variable | Req | Default | Bounds / Notes |
+|---|---|---|---|
+| `CONNECTOR_ENCRYPTION_KEY` | Optional* | — | 32 bytes (64 hex or base64). Encrypts the connector key at rest so the SaaS can sign outbound calls. **Required for product publish + pull sync**; when unset those paths return a clear "not configured" error (API still boots). |
+| `WP_HTTP_TIMEOUT_MS` | Optional | `20000` | positive int — outbound HTTP timeout |
+| `SYNC_PAGE_SIZE` | Optional | `50` | int 1–100 — WooCommerce page size |
+| `SYNC_MAX_PAGES` | Optional | `200` | int 1–1000 — per-entity page cap (loop safety) |
+
+\* Functionally required for any store that uses publish/sync.
+
+### Dashboard analytics
+
+| Variable | Req | Default | Bounds / Notes |
+|---|---|---|---|
+| `DASHBOARD_CACHE_TTL_SECONDS` | Optional | `300` | int 0–3600 — Redis read-through TTL (0 disables) |
+| `DASHBOARD_LOW_STOCK_THRESHOLD` | Optional | `5` | int 0–100000 — active product is low-stock when `stock ≤` this |
+
+### AI assistants (Phase 12.5)
+
+| Variable | Req | Default | Bounds / Notes |
+|---|---|---|---|
+| `OPENAI_API_KEY` | Optional | — | When **unset**, a deterministic mock provider is used (assistants work offline). Set to enable live generation — no code change needed. |
+| `OPENAI_MODEL` | Optional | `gpt-4o-mini` | non-empty |
+| `OPENAI_BASE_URL` | Optional | `https://api.openai.com/v1` | valid URL |
+| `AI_REQUEST_TIMEOUT_MS` | Optional | `30000` | positive int — AI call timeout |
+
+### Graceful shutdown
+
+| Variable | Req | Default | Bounds / Notes |
+|---|---|---|---|
+| `SHUTDOWN_TIMEOUT_MS` | Optional | `10000` | positive int — drain window on SIGTERM/SIGINT before forced exit |
+
+---
+
+## Dashboard (`apps/dashboard`)
+
+| Variable | Req | Default | Bounds / Notes |
+|---|---|---|---|
+| `VITE_API_URL` | Optional | `http://localhost:4000` | API origin; the client appends `/api/v1`. **Set to the production API origin** and ensure it is in the API's `CORS_ORIGIN`. Baked in at build time. |
+
+---
+
+## WordPress Connector (`plugins/wordpress-connector`)
+
+No environment variables. Configured at runtime via the plugin admin page:
+
+- **SaaS API URL** — the dashboard API origin.
+- **API Key** — generated in the dashboard (Connection page, `settings.edit`) and pasted in. Stored in `wp_options` (plaintext — a WordPress structural limitation; rotate from the dashboard if the WP DB is exposed).
+
+---
+
+## Minimum required for production boot
+
+```bash
+NODE_ENV=production
+CORS_ORIGIN=https://dashboard.example.com      # NOT "*" — boot fails otherwise
+DATABASE_URL=postgresql://app:***@db:5432/saas_dashboard
+REDIS_URL=redis://redis:6379
+JWT_ACCESS_SECRET=<openssl rand -hex 32>
+JWT_REFRESH_SECRET=<openssl rand -hex 32>
+CONNECTOR_ENCRYPTION_KEY=<openssl rand -hex 32>   # required for publish/sync
+# Dashboard build:
+VITE_API_URL=https://api.example.com
+```
+
+Generate secrets with: `openssl rand -hex 32`. See `deployment-checklist.md` for the full deploy sequence.
