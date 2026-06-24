@@ -14,6 +14,7 @@ import roleRoutes from "../modules/roles/roles.routes";
 import storeRoutes from "../modules/stores/stores.routes";
 import wpRoutes from "../modules/connections/wp.routes";
 import syncRoutes from "../modules/sync/sync.routes";
+import auditLogRoutes from "../modules/audit-logs/audit-logs.routes";
 
 /**
  * Root API router, mounted under env.API_PREFIX (default /api/v1).
@@ -42,6 +43,7 @@ router.use("/automations", automationRoutes);
 router.use("/settings", settingsRoutes);
 router.use("/ai", aiRoutes);
 router.use("/sync", syncRoutes);
+router.use("/audit-logs", auditLogRoutes);
 router.use("/wp", wpRoutes);
 
 export default router;

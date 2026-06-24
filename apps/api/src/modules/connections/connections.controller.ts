@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import { successResponse } from "../../lib/api-response";
 import { getAuth } from "../../middleware/authenticate";
 import { getConnector } from "../../middleware/authenticate-connector";
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "../../db/schema/audit-logs";
+import { recordAuditFromRequest } from "../audit-logs/audit-logs.recorder";
 import { getStoreById } from "../stores/stores.service";
 import {
   disconnect,
@@ -27,6 +29,19 @@ export async function generateApiKey(
 ): Promise<void> {
   const { storeId } = getAuth(req);
   const { plaintext, connection } = await issueApiKey(storeId);
+
+  // Audit the change — never log the plaintext key; only the non-secret prefix.
+  await recordAuditFromRequest(req, {
+    action: AUDIT_ACTIONS.CONNECTION_CHANGED,
+    entityType: AUDIT_ENTITY_TYPES.CONNECTION,
+    entityId: storeId,
+    message: "أنشأ مفتاح اتصال جديد",
+    metadata: {
+      event: "api_key_generated",
+      apiKeyPrefix: connection.apiKeyPrefix,
+      status: connection.status,
+    },
+  });
 
   res.status(201).json(
     successResponse(
@@ -79,6 +94,13 @@ export async function disconnectCurrentStore(
   }
 
   const updated = await disconnect(connection.id);
+  await recordAuditFromRequest(req, {
+    action: AUDIT_ACTIONS.CONNECTION_CHANGED,
+    entityType: AUDIT_ENTITY_TYPES.CONNECTION,
+    entityId: storeId,
+    message: "فصل المتجر من لوحة التحكم",
+    metadata: { event: "disconnected", status: updated.status },
+  });
   res
     .status(200)
     .json(successResponse(toConnectionStatusDto(updated), "Store disconnected"));
@@ -94,6 +116,17 @@ export async function wpConnect(req: Request, res: Response): Promise<void> {
 
   const connection = await markConnected(connectionId, body);
   const store = await getStoreById(storeId);
+
+  // Connector-driven (no dashboard user): scope to the connector's store, userId null.
+  await recordAuditFromRequest(req, {
+    action: AUDIT_ACTIONS.CONNECTION_CHANGED,
+    entityType: AUDIT_ENTITY_TYPES.CONNECTION,
+    entityId: storeId,
+    storeId,
+    userId: null,
+    message: "تم ربط المتجر عبر ووردبريس",
+    metadata: { event: "connected", status: connection.status },
+  });
 
   res.status(200).json(
     successResponse(
@@ -136,8 +169,18 @@ export async function wpVerify(req: Request, res: Response): Promise<void> {
  * the connection. Idempotent from the caller's perspective.
  */
 export async function wpDisconnect(req: Request, res: Response): Promise<void> {
-  const { connectionId } = getConnector(req);
+  const { storeId, connectionId } = getConnector(req);
   await disconnect(connectionId);
+
+  await recordAuditFromRequest(req, {
+    action: AUDIT_ACTIONS.CONNECTION_CHANGED,
+    entityType: AUDIT_ENTITY_TYPES.CONNECTION,
+    entityId: storeId,
+    storeId,
+    userId: null,
+    message: "تم فصل المتجر عبر ووردبريس",
+    metadata: { event: "disconnected" },
+  });
 
   res
     .status(200)

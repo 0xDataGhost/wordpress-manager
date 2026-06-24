@@ -150,8 +150,8 @@ Do not build these in MVP:
 | 12 | Settings Module | ✅ COMPLETED |
 | 12.5 | AI Assistants | ✅ COMPLETED |
 | 13 | Webhooks & Incremental Sync | ✅ COMPLETED |
-| 13.5 | Audit Logs | ⏭️ NEXT |
-| 14 | QA, Permissions & Production Readiness | ⏳ PENDING |
+| 13.5 | Audit Logs | ✅ COMPLETED |
+| 14 | QA, Permissions & Production Readiness | ⏭️ NEXT |
 
 ## Known Deferrals Within Completed Phases
 
@@ -1269,7 +1269,20 @@ POST /wp/webhooks/customers
 
 ---
 
-# Phase 13.5 — Audit Logs ⏳ PENDING
+# Phase 13.5 — Audit Logs ✅ COMPLETED
+
+## Implementation Notes (completed)
+
+- **DB (migration 0010):** added one tenant-scoped `audit_logs` table — `id`, `store_id` (FK→stores, cascade), `user_id` (nullable FK→users, **ON DELETE SET NULL** so removing a user never erases the trail), `action`, `entity_type`, `entity_id` (text — the referenced id varies by family), `message`, `metadata` jsonb, `ip_address`, `user_agent`, `created_at`. `action`/`entity_type` stay free text backed by canonical lists (`AUDIT_ACTIONS`, `AUDIT_ENTITY_TYPES`) so new kinds need no migration. Four indexes: `audit_logs_store_created_idx` (store_id, created_at, id) backs the list + deterministic `created_at desc, id desc` sort; `(store_id, action)`, `(store_id, entity_type)`, `(store_id, user_id)` back the filters.
+- **Backend `audit-logs` module** (`audit-logs.schemas.ts` / `serializer` / `service` / `recorder` / `controller` / `routes` + unit tests), mirroring the established module shape. `recordAuditLog` is **best-effort by design**: it catches and logs its own errors and never throws, so an audit-write failure can never break the action it records. A thin `recordAuditFromRequest(req, params)` adapter derives IP (`req.ip`, trust-proxy aware), user agent, tenant and acting user from the request (with overrides for login / connector routes).
+- **Endpoint:** `GET /audit-logs` — **JWT + `settings.view`**, tenant-scoped. Filters: `action`, `entityType`, `userId`, `dateFrom`/`dateTo` (inclusive `YYYY-MM-DD`, UTC), plus pagination; ordered newest-first with an id tiebreaker. The list LEFT JOINs `users` to attach a non-sensitive acting-user summary (id/fullName/email; null for system actions).
+- **Instrumented actions (writes / security / system only — never reads):** login, logout, product created/updated/archived, order notes updated, customer notes updated, settings updated, automation enabled/disabled/config-updated, store connection changed (dashboard api-key generate + disconnect, and connector-driven connect/disconnect with `user_id` null), manual sync started/completed/failed (dashboard + WordPress trigger), webhook processed/failed (`user_id` null), and AI assistant used. Each was added as an additive best-effort call at the controller boundary — **no existing behavior was modified** except `auth.logout` now returns the resolved `{ userId, storeId }` so the unauthenticated logout endpoint can be audited.
+- **Sensitive-data protection (audited):** metadata carries identifiers/counts/changed-field **names** only — never passwords, tokens, API keys, raw webhook payloads, or raw AI prompts. Specifically: API-key generation logs only the non-secret prefix; webhook events log `event`/`externalId`/`eventId` (never `data`); AI logs only which assistant ran; order/customer notes log only `hasNotes` (not the note text); product/settings/automation updates log only changed-field names. The existing logger redaction (token/apiKey/secret/cipher) remains a second line of defense.
+- **Tenant isolation:** every write passes the resolved `storeId` (from JWT, the login result, or the connector API key) and every read query filters by `storeId`; there is no cross-store path. Audit logs are never written for plain read requests.
+- **Frontend (Arabic RTL):** new `/audit-logs` page (+ sidebar "سجلّ التدقيق") — a table (الإجراء badge / النوع / التفاصيل / المستخدم / التاريخ), filters (action, entity type, date-from/date-to), pagination, loading/empty/error states, a no-access state gated by `settings.view`, light + dark compatible. `audit-logs-api.ts` client wired through `apiRequest`; `audit-display.ts` maps actions/entities to Arabic labels + tones.
+- **Testing:** API typecheck / lint / build green; 156 unit tests pass (9 new for the audit schemas + serializer). Dashboard typecheck / lint / production build green. No PHP plugin files were touched (audit logging is entirely SaaS-side), so PHP lint was not applicable. Live in-process HTTP smoke test confirmed `GET /audit-logs` is mounted and auth/permission-gated (401 without/with bad JWT, reaches past auth with a valid token, 404 on unknown sub-path); the dashboard dev server booted with the new route + nav and zero console errors.
+- **Not live-tested (no environment):** no PostgreSQL/Redis here, so the full authenticated round-trip (real rows written for each instrumented action, filter/pagination results, cross-store isolation against live data) and the populated dashboard page behind login were verified structurally (unit tests + code-level store-scoping/permission guards + the in-process smoke test) rather than against a running stack.
+- **Not in this phase (out of scope):** no Phase 14 QA/production-readiness work, no new business features, no log retention/export/delete, no audit-log detail page, and no per-user filter control in the UI (the backend supports `userId`, the UI exposes action/entity/date per the brief).
 
 ## Goal
 
@@ -1447,8 +1460,8 @@ Phase 11  — Automations MVP                           ✅ COMPLETED
 Phase 12  — Settings Module                           ✅ COMPLETED
 Phase 12.5— AI Assistants                             ✅ COMPLETED
 Phase 13  — Webhooks & Incremental Sync               ✅ COMPLETED
-Phase 13.5— Audit Logs                                ⏭️ NEXT
-Phase 14  — QA, Permissions & Production Readiness    ⏳ PENDING
+Phase 13.5— Audit Logs                                ✅ COMPLETED
+Phase 14  — QA, Permissions & Production Readiness    ⏭️ NEXT
 ```
 
 > Note: Products Module (Phase 5) was intentionally built before WooCommerce Sync (Phase 6) so the dashboard had a working product surface and publish foundation first.

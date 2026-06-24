@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
 import { successResponse } from "../../lib/api-response";
 import { getAuth } from "../../middleware/authenticate";
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "../../db/schema/audit-logs";
+import { recordAuditFromRequest } from "../audit-logs/audit-logs.recorder";
 import { toStoreDto } from "../stores/stores.serializer";
 import * as authService from "./auth.service";
 import type {
@@ -28,6 +30,16 @@ export async function register(req: Request, res: Response): Promise<void> {
 
 export async function login(req: Request, res: Response): Promise<void> {
   const result = await authService.login(req.body as LoginInput);
+  // Login is not authenticated, so the store/user come from the result, not req.
+  await recordAuditFromRequest(req, {
+    action: AUDIT_ACTIONS.LOGIN,
+    entityType: AUDIT_ENTITY_TYPES.USER,
+    entityId: result.user.id,
+    storeId: result.store.id,
+    userId: result.user.id,
+    message: "تسجيل دخول ناجح",
+    metadata: { email: result.user.email },
+  });
   res.status(200).json(successResponse(shapeAuth(result), "Login successful"));
 }
 
@@ -39,7 +51,19 @@ export async function refresh(req: Request, res: Response): Promise<void> {
 
 export async function logout(req: Request, res: Response): Promise<void> {
   const { refreshToken } = req.body as LogoutInput;
-  await authService.logout(refreshToken);
+  const context = await authService.logout(refreshToken);
+  // Only audit a real logout (a valid token was revoked); the endpoint is not
+  // JWT-authenticated, so the tenant/user come from the resolved token context.
+  if (context) {
+    await recordAuditFromRequest(req, {
+      action: AUDIT_ACTIONS.LOGOUT,
+      entityType: AUDIT_ENTITY_TYPES.USER,
+      entityId: context.userId,
+      storeId: context.storeId,
+      userId: context.userId,
+      message: "تسجيل خروج",
+    });
+  }
   res.status(200).json(successResponse({ loggedOut: true }, "Logged out"));
 }
 

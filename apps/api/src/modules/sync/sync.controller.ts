@@ -2,6 +2,9 @@ import type { Request, Response } from "express";
 import { successResponse } from "../../lib/api-response";
 import { getAuth } from "../../middleware/authenticate";
 import { getConnector } from "../../middleware/authenticate-connector";
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "../../db/schema/audit-logs";
+import type { SyncJobRow, SyncTrigger } from "../../db/schema/sync-jobs";
+import { recordAuditFromRequest } from "../audit-logs/audit-logs.recorder";
 import { toSyncJobDto } from "./sync.serializer";
 import {
   listRecentSyncJobs,
@@ -11,17 +14,89 @@ import {
 } from "./sync.service";
 import type { WpSyncTriggerInput } from "./sync.schemas";
 
-/** Wraps a finished sync job in the standard response envelope. */
-function jobResponse(res: Response, job: ReturnType<typeof toSyncJobDto>): void {
-  res.status(200).json(successResponse({ job }, "Sync completed"));
+/** Arabic labels for the synced entity, used in audit messages. */
+const SYNC_LABELS: Record<SyncEntity | "all", string> = {
+  product: "المنتجات",
+  order: "الطلبات",
+  customer: "العملاء",
+  all: "الكل",
+};
+
+interface SyncAuditContext {
+  storeId: string;
+  /** null for connector-driven syncs (no dashboard user). */
+  userId: string | null;
+  entity: SyncEntity | "all";
+  trigger: SyncTrigger;
+}
+
+/**
+ * Runs a sync while best-effort auditing its lifecycle (started → completed /
+ * failed). The audit calls never throw, so they cannot affect the sync or the
+ * response; on failure the original error is rethrown to the error handler so
+ * the client still gets the precise message.
+ */
+async function runSyncWithAudit(
+  req: Request,
+  res: Response,
+  ctx: SyncAuditContext,
+  run: () => Promise<SyncJobRow>,
+): Promise<void> {
+  const label = SYNC_LABELS[ctx.entity];
+  const base = {
+    entityType: AUDIT_ENTITY_TYPES.SYNC,
+    storeId: ctx.storeId,
+    userId: ctx.userId,
+  };
+
+  await recordAuditFromRequest(req, {
+    ...base,
+    action: AUDIT_ACTIONS.SYNC_STARTED,
+    message: `بدأت مزامنة يدوية: ${label}`,
+    metadata: { entity: ctx.entity, trigger: ctx.trigger },
+  });
+
+  try {
+    const job = await run();
+    await recordAuditFromRequest(req, {
+      ...base,
+      action: AUDIT_ACTIONS.SYNC_COMPLETED,
+      entityId: job.id,
+      message: `اكتملت المزامنة: ${label}`,
+      metadata: {
+        entity: ctx.entity,
+        trigger: ctx.trigger,
+        total: job.total,
+        created: job.createdCount,
+        updated: job.updatedCount,
+      },
+    });
+    res.status(200).json(successResponse({ job: toSyncJobDto(job) }, "Sync completed"));
+  } catch (err) {
+    const message = (err instanceof Error ? err.message : "Unexpected error").slice(
+      0,
+      500,
+    );
+    await recordAuditFromRequest(req, {
+      ...base,
+      action: AUDIT_ACTIONS.SYNC_FAILED,
+      message: `فشلت المزامنة: ${label}`,
+      metadata: { entity: ctx.entity, trigger: ctx.trigger, error: message },
+    });
+    throw err;
+  }
 }
 
 /** Builds a JWT-authenticated single-entity sync handler. */
 function entitySyncHandler(entity: SyncEntity) {
   return async (req: Request, res: Response): Promise<void> => {
-    const { storeId } = getAuth(req);
-    const job = await runEntitySync(storeId, entity, "dashboard");
-    jobResponse(res, toSyncJobDto(job));
+    const { storeId, userId } = getAuth(req);
+    await runSyncWithAudit(
+      req,
+      res,
+      { storeId, userId, entity, trigger: "dashboard" },
+      () => runEntitySync(storeId, entity, "dashboard"),
+    );
   };
 }
 
@@ -39,9 +114,13 @@ export async function syncAllHandler(
   req: Request,
   res: Response,
 ): Promise<void> {
-  const { storeId } = getAuth(req);
-  const job = await runFullSync(storeId, "dashboard");
-  jobResponse(res, toSyncJobDto(job));
+  const { storeId, userId } = getAuth(req);
+  await runSyncWithAudit(
+    req,
+    res,
+    { storeId, userId, entity: "all", trigger: "dashboard" },
+    () => runFullSync(storeId, "dashboard"),
+  );
 }
 
 /** GET /sync/status — recent sync jobs for the store (JWT, settings.view). */
@@ -69,12 +148,14 @@ export async function wpTriggerSyncHandler(
   const { storeId } = getConnector(req);
   const { entity } = req.body as WpSyncTriggerInput;
 
-  const job =
-    entity === "all"
-      ? await runFullSync(storeId, "wordpress")
-      : await runEntitySync(storeId, entity, "wordpress");
-
-  res
-    .status(200)
-    .json(successResponse({ job: toSyncJobDto(job) }, "Sync completed"));
+  await runSyncWithAudit(
+    req,
+    res,
+    // Connector-driven: no dashboard user.
+    { storeId, userId: null, entity, trigger: "wordpress" },
+    () =>
+      entity === "all"
+        ? runFullSync(storeId, "wordpress")
+        : runEntitySync(storeId, entity, "wordpress"),
+  );
 }

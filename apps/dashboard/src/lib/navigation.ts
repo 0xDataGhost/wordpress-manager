@@ -9,6 +9,7 @@ import {
   Bell,
   Plug,
   Settings,
+  ScrollText,
   type LucideIcon,
 } from "lucide-react";
 
@@ -35,4 +36,5 @@ export const navItems: NavItem[] = [
   { label: "الإشعارات", to: "/notifications", icon: Bell },
   { label: "ربط المتجر", to: "/connection", icon: Plug },
   { label: "الإعدادات", to: "/settings", icon: Settings },
+  { label: "سجلّ التدقيق", to: "/audit-logs", icon: ScrollText },
 ];

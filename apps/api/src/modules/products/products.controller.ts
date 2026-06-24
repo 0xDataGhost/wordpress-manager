@@ -3,6 +3,8 @@ import { successResponse } from "../../lib/api-response";
 import { NotFoundError } from "../../lib/errors";
 import { getAuth } from "../../middleware/authenticate";
 import { getConnector } from "../../middleware/authenticate-connector";
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "../../db/schema/audit-logs";
+import { recordAuditFromRequest } from "../audit-logs/audit-logs.recorder";
 import { toProductDto } from "./products.serializer";
 import {
   archiveProduct,
@@ -68,6 +70,13 @@ export async function createProductHandler(
   const { storeId } = getAuth(req);
   const input = req.body as CreateProductInput;
   const product = await createProduct(storeId, input);
+  await recordAuditFromRequest(req, {
+    action: AUDIT_ACTIONS.PRODUCT_CREATED,
+    entityType: AUDIT_ENTITY_TYPES.PRODUCT,
+    entityId: product.id,
+    message: `أنشأ منتجاً: ${product.name}`,
+    metadata: { name: product.name, status: product.status },
+  });
   res
     .status(201)
     .json(successResponse(toProductDto(product), "Product created"));
@@ -82,6 +91,14 @@ export async function updateProductHandler(
   const { id } = req.params as ProductParams;
   const input = req.body as UpdateProductInput;
   const product = await updateProduct(storeId, id, input);
+  await recordAuditFromRequest(req, {
+    action: AUDIT_ACTIONS.PRODUCT_UPDATED,
+    entityType: AUDIT_ENTITY_TYPES.PRODUCT,
+    entityId: product.id,
+    message: `حدّث منتجاً: ${product.name}`,
+    // Field names only — never sensitive values.
+    metadata: { name: product.name, changedFields: Object.keys(input) },
+  });
   res
     .status(200)
     .json(successResponse(toProductDto(product), "Product updated"));
@@ -95,6 +112,13 @@ export async function deleteProductHandler(
   const { storeId } = getAuth(req);
   const { id } = req.params as ProductParams;
   const product = await archiveProduct(storeId, id);
+  await recordAuditFromRequest(req, {
+    action: AUDIT_ACTIONS.PRODUCT_ARCHIVED,
+    entityType: AUDIT_ENTITY_TYPES.PRODUCT,
+    entityId: product.id,
+    message: `أرشف منتجاً: ${product.name}`,
+    metadata: { name: product.name },
+  });
   res
     .status(200)
     .json(successResponse(toProductDto(product), "Product archived"));

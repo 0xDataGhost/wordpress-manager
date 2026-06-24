@@ -163,13 +163,21 @@ export async function refresh(refreshToken: string): Promise<TokenPair> {
   return { accessToken, refreshToken: rotated.refreshToken };
 }
 
-/** Best-effort logout: revokes the presented refresh token if it is valid. */
-export async function logout(refreshToken: string): Promise<void> {
+/**
+ * Best-effort logout: revokes the presented refresh token if it is valid.
+ * Returns the resolved { userId, storeId } when a valid token was revoked (so
+ * the caller can audit the logout), or null for an invalid/expired token.
+ */
+export async function logout(
+  refreshToken: string,
+): Promise<{ userId: string; storeId: string } | null> {
   try {
     const claims = verifyRefreshToken(refreshToken);
     await revokeRefreshToken(claims.jti);
+    return { userId: claims.userId, storeId: claims.storeId };
   } catch {
     // An invalid/expired token has nothing to revoke; logout is idempotent.
+    return null;
   }
 }
 

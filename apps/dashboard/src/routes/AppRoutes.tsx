@@ -20,6 +20,7 @@ import { NotificationsListPage } from "@/pages/notifications/NotificationsListPa
 import { AutomationsListPage } from "@/pages/automations/AutomationsListPage";
 import { AIAssistantsPage } from "@/pages/ai/AIAssistantsPage";
 import { SettingsPage } from "@/pages/settings/SettingsPage";
+import { AuditLogsListPage } from "@/pages/audit-logs/AuditLogsListPage";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 
@@ -55,6 +56,7 @@ export function AppRoutes() {
           <Route path="/notifications" element={<NotificationsListPage />} />
           <Route path="/connection" element={<ConnectionPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/audit-logs" element={<AuditLogsListPage />} />
         </Route>
       </Route>
 

@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
 import { successResponse } from "../../lib/api-response";
 import { getAuth } from "../../middleware/authenticate";
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "../../db/schema/audit-logs";
+import { recordAuditFromRequest } from "../audit-logs/audit-logs.recorder";
 import {
   toAutomationDto,
   toAutomationLogDto,
@@ -37,6 +39,31 @@ export async function updateAutomationHandler(
   const { id } = req.params as AutomationParams;
   const body = req.body as UpdateAutomationInput;
   const updated = await updateAutomation(storeId, id, body);
+
+  // A single PATCH may toggle enabled and/or change config — audit each aspect
+  // that the request actually carried, mirroring the plan's three actions.
+  if (body.enabled !== undefined) {
+    await recordAuditFromRequest(req, {
+      action: body.enabled
+        ? AUDIT_ACTIONS.AUTOMATION_ENABLED
+        : AUDIT_ACTIONS.AUTOMATION_DISABLED,
+      entityType: AUDIT_ENTITY_TYPES.AUTOMATION,
+      entityId: updated.id,
+      message: `${body.enabled ? "فعّل" : "أوقف"} أتمتة: ${updated.type}`,
+      metadata: { type: updated.type },
+    });
+  }
+  if (body.config !== undefined) {
+    await recordAuditFromRequest(req, {
+      action: AUDIT_ACTIONS.AUTOMATION_CONFIG_UPDATED,
+      entityType: AUDIT_ENTITY_TYPES.AUTOMATION,
+      entityId: updated.id,
+      message: `حدّث إعدادات أتمتة: ${updated.type}`,
+      // Changed config field names only — never the values.
+      metadata: { type: updated.type, changedFields: Object.keys(body.config) },
+    });
+  }
+
   res
     .status(200)
     .json(successResponse(toAutomationDto(updated), "Automation updated"));

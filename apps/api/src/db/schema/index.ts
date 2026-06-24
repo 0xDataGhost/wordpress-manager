@@ -27,3 +27,4 @@ export * from "./notifications";
 export * from "./automations";
 export * from "./automation-logs";
 export * from "./settings";
+export * from "./audit-logs";

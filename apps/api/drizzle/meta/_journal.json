@@ -71,6 +71,13 @@
       "when": 1782195010900,
       "tag": "0009_equal_thunderbird",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1782258377424,
+      "tag": "0010_amazing_black_widow",
+      "breakpoints": true
     }
   ]
 }

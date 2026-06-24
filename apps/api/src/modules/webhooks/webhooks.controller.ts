@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import { successResponse } from "../../lib/api-response";
 import { getAuth } from "../../middleware/authenticate";
 import { getConnector } from "../../middleware/authenticate-connector";
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "../../db/schema/audit-logs";
+import { recordAuditFromRequest } from "../audit-logs/audit-logs.recorder";
 import { toWebhookEventDto } from "./webhooks.serializer";
 import {
   listRecentWebhookEvents,
@@ -24,7 +26,45 @@ function webhookHandler(entity: WebhookEntity) {
     const { storeId } = getConnector(req);
     const input = req.body as WebhookInput;
 
-    const result = await recordAndProcessWebhook(storeId, entity, input);
+    // Identifiers only — NEVER the raw payload (input.data is not logged).
+    const baseMeta = {
+      event: input.event,
+      entity,
+      externalId: input.externalId,
+      eventId: input.eventId,
+    };
+
+    let result;
+    try {
+      result = await recordAndProcessWebhook(storeId, entity, input);
+    } catch (err) {
+      const message = (
+        err instanceof Error ? err.message : "Unexpected error"
+      ).slice(0, 500);
+      await recordAuditFromRequest(req, {
+        action: AUDIT_ACTIONS.WEBHOOK_FAILED,
+        entityType: AUDIT_ENTITY_TYPES.WEBHOOK,
+        entityId: input.externalId,
+        storeId,
+        userId: null,
+        message: `فشلت معالجة حدث ويب هوك: ${input.event}`,
+        metadata: { ...baseMeta, error: message },
+      });
+      throw err;
+    }
+
+    // Only audit genuinely processed events — duplicates are no-ops, not actions.
+    if (result.processed) {
+      await recordAuditFromRequest(req, {
+        action: AUDIT_ACTIONS.WEBHOOK_PROCESSED,
+        entityType: AUDIT_ENTITY_TYPES.WEBHOOK,
+        entityId: input.externalId,
+        storeId,
+        userId: null,
+        message: `تمت معالجة حدث ويب هوك: ${input.event}`,
+        metadata: { ...baseMeta, result: result.action },
+      });
+    }
 
     res.status(200).json(
       successResponse(

@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import { successResponse } from "../../lib/api-response";
 import { NotFoundError } from "../../lib/errors";
 import { getAuth } from "../../middleware/authenticate";
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "../../db/schema/audit-logs";
+import { recordAuditFromRequest } from "../audit-logs/audit-logs.recorder";
 import { toCustomerDetailsDto, toCustomerDto } from "./customers.serializer";
 import {
   getCustomerDetails,
@@ -73,6 +75,14 @@ export async function updateCustomerNotesHandler(
   const { id } = req.params as CustomerParams;
   const input = req.body as UpdateCustomerNotesInput;
   const details = await updateCustomerNotes(storeId, id, input);
+  await recordAuditFromRequest(req, {
+    action: AUDIT_ACTIONS.CUSTOMER_NOTES_UPDATED,
+    entityType: AUDIT_ENTITY_TYPES.CUSTOMER,
+    entityId: details.customer.id,
+    message: `حدّث ملاحظات العميل`,
+    // Record only whether notes are now present — never the note content.
+    metadata: { hasNotes: details.customer.internalNotes !== null },
+  });
   res
     .status(200)
     .json(
