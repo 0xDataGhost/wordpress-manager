@@ -113,6 +113,13 @@
       "when": 1782413234172,
       "tag": "0015_unusual_khan",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1782414844217,
+      "tag": "0016_worthless_lockjaw",
+      "breakpoints": true
     }
   ]
 }

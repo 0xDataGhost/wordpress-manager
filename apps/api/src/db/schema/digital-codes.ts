@@ -14,6 +14,7 @@ import { customers } from "./customers";
 import { orderItems } from "./order-items";
 import { orders } from "./orders";
 import { products } from "./products";
+import { suppliers } from "./suppliers";
 import { stores } from "./stores";
 import { users } from "./users";
 
@@ -71,8 +72,11 @@ export const digitalCodes = pgTable(
     batchId: uuid("batch_id").references(() => codeBatches.id, {
       onDelete: "set null",
     }),
-    // FK deferred to Phase 20 (suppliers table). Plain nullable uuid for now.
-    supplierId: uuid("supplier_id"),
+    // Linked to the supplier the code was purchased from (Phase 20). SET NULL on
+    // supplier deletion so cost history survives.
+    supplierId: uuid("supplier_id").references(() => suppliers.id, {
+      onDelete: "set null",
+    }),
     // Encrypted raw code (AES-256-GCM). NEVER the plaintext.
     codeCipher: text("code_cipher").notNull(),
     codeIv: text("code_iv").notNull(),

@@ -15,6 +15,8 @@ import { DIGITAL_CODE_STATUSES } from "../../db/schema/digital-codes";
 
 export const importCodesSchema = z.object({
   productId: z.string().uuid(),
+  // Optional supplier the batch was purchased from (Phase 20). Must be active.
+  supplierId: z.string().uuid().optional(),
   batchName: z.string().trim().max(200).optional(),
   // The raw codes, one per line. Parsed/normalized server-side; never stored raw.
   codesText: z.string().min(1, "Provide at least one code"),

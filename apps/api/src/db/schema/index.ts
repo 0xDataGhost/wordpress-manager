@@ -29,6 +29,8 @@ export * from "./automation-logs";
 export * from "./settings";
 export * from "./audit-logs";
 export * from "./digital-product-settings";
+export * from "./suppliers";
+export * from "./supplier-products";
 export * from "./code-batches";
 export * from "./digital-codes";
 export * from "./code-assignments";

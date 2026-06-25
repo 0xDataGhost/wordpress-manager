@@ -66,6 +66,22 @@ export const PERMISSIONS = [
     key: "digital_delivery.retry",
     description: "Retry a failed digital code delivery",
   },
+  {
+    key: "digital_suppliers.view",
+    description: "View suppliers and their batches/metrics",
+  },
+  {
+    key: "digital_suppliers.create",
+    description: "Create suppliers",
+  },
+  {
+    key: "digital_suppliers.edit",
+    description: "Edit suppliers and their product mappings",
+  },
+  {
+    key: "digital_suppliers.delete",
+    description: "Archive suppliers",
+  },
 ] as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[number]["key"];
@@ -124,6 +140,10 @@ export const SYSTEM_ROLES: SystemRoleDefinition[] = [
       "digital_delivery.assign",
       "digital_delivery.deliver",
       "digital_delivery.retry",
+      "digital_suppliers.view",
+      "digital_suppliers.create",
+      "digital_suppliers.edit",
+      "digital_suppliers.delete",
     ],
   },
   {
@@ -141,6 +161,9 @@ export const SYSTEM_ROLES: SystemRoleDefinition[] = [
       "digital_inventory.view",
       "digital_inventory.edit",
       "digital_inventory.import",
+      "digital_suppliers.view",
+      "digital_suppliers.create",
+      "digital_suppliers.edit",
     ],
   },
   {

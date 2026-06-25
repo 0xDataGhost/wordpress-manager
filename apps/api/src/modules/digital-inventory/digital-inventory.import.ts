@@ -12,6 +12,7 @@ import {
 } from "../../lib/errors";
 import { isDigitalCodeCryptoConfigured } from "../../lib/digital-code-crypto";
 import { createNotification } from "../notifications/notifications.service";
+import { assertSupplierImportable } from "../suppliers/suppliers.service";
 import { buildImportCandidates } from "./digital-inventory.parse";
 import type { ImportCodesInput } from "./digital-inventory.schemas";
 
@@ -71,6 +72,15 @@ export async function importCodes(
     );
   }
 
+  // Optional supplier: must belong to the store and be active (Phase 20). Falls
+  // back to the supplier's default currency when the import omits one.
+  const supplierId = input.supplierId ?? null;
+  let currency = input.currency ?? null;
+  if (supplierId) {
+    const supplier = await assertSupplierImportable(storeId, supplierId);
+    if (!currency) currency = supplier.currency;
+  }
+
   const prepared = buildImportCandidates(input.codesText);
 
   if (prepared.received === 0) {
@@ -120,9 +130,10 @@ export async function importCodes(
         .values({
           storeId,
           productId: input.productId,
+          supplierId,
           batchName: input.batchName ?? null,
           source: input.source,
-          currency: input.currency ?? null,
+          currency,
           costPerCode,
           expiresAt: input.expiresAt ?? null,
           notes: input.notes ?? null,
@@ -141,6 +152,7 @@ export async function importCodes(
             storeId,
             productId: input.productId,
             batchId: batch.id,
+            supplierId,
             codeCipher: c.cipher,
             codeIv: c.iv,
             codeTag: c.tag,
@@ -148,7 +160,7 @@ export async function importCodes(
             codePreview: c.preview,
             status: "available",
             costPrice: costPerCode,
-            currency: input.currency ?? null,
+            currency,
             createdBy: userId,
           })),
         )

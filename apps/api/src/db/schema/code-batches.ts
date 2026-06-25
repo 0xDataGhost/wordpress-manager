@@ -9,6 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { products } from "./products";
 import { stores } from "./stores";
+import { suppliers } from "./suppliers";
 import { users } from "./users";
 
 /**
@@ -52,8 +53,11 @@ export const codeBatches = pgTable(
     productId: uuid("product_id")
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
-    // FK deferred to Phase 20 (suppliers table). Plain nullable uuid for now.
-    supplierId: uuid("supplier_id"),
+    // Linked to the supplier the batch was purchased from (Phase 20). SET NULL on
+    // supplier deletion so cost history survives.
+    supplierId: uuid("supplier_id").references(() => suppliers.id, {
+      onDelete: "set null",
+    }),
     batchName: text("batch_name"),
     source: text("source").notNull().default("manual_import"),
     importFileName: text("import_file_name"),
