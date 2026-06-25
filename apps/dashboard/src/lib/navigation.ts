@@ -10,6 +10,7 @@ import {
   Plug,
   Settings,
   ScrollText,
+  KeyRound,
   type LucideIcon,
 } from "lucide-react";
 
@@ -44,6 +45,12 @@ export const navItems: NavItem[] = [
     to: "/products",
     icon: Package,
     permission: "products.view",
+  },
+  {
+    label: "المخزون الرقمي",
+    to: "/digital-inventory",
+    icon: KeyRound,
+    permission: "digital_inventory.view",
   },
   {
     label: "الطلبات",

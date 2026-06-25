@@ -98,6 +98,16 @@ const AuditLogsListPage = lazy(() =>
     default: m.AuditLogsListPage,
   })),
 );
+const DigitalInventoryPage = lazy(() =>
+  import("@/pages/digital-inventory/DigitalInventoryPage").then((m) => ({
+    default: m.DigitalInventoryPage,
+  })),
+);
+const DigitalBatchesPage = lazy(() =>
+  import("@/pages/digital-inventory/DigitalBatchesPage").then((m) => ({
+    default: m.DigitalBatchesPage,
+  })),
+);
 const PlaceholderPage = lazy(() =>
   import("@/pages/PlaceholderPage").then((m) => ({
     default: m.PlaceholderPage,
@@ -147,6 +157,14 @@ export function AppRoutes() {
             <Route path="/connection" element={<ConnectionPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/audit-logs" element={<AuditLogsListPage />} />
+            <Route
+              path="/digital-inventory"
+              element={<DigitalInventoryPage />}
+            />
+            <Route
+              path="/digital-inventory/batches"
+              element={<DigitalBatchesPage />}
+            />
           </Route>
         </Route>
 
