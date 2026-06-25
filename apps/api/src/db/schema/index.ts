@@ -31,3 +31,4 @@ export * from "./audit-logs";
 export * from "./digital-product-settings";
 export * from "./code-batches";
 export * from "./digital-codes";
+export * from "./code-assignments";

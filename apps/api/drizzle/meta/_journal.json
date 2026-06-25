@@ -99,6 +99,13 @@
       "when": 1782408849529,
       "tag": "0013_demonic_wolfsbane",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1782411254998,
+      "tag": "0014_sharp_dragon_lord",
+      "breakpoints": true
     }
   ]
 }

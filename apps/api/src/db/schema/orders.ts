@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   index,
   integer,
   numeric,
@@ -27,6 +28,26 @@ export const ORDER_STATUSES = [
   "failed",
 ] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
+
+/**
+ * Order-level digital fulfillment status (Phase 17, plan2 §2.4). Free text backed
+ * by this list. Maintained by the assignment engine — `not_required` for orders
+ * with no digital items, otherwise pending/partial/completed/manual_review as
+ * codes are assigned. `failed`/`cancelled`/`refunded` are reserved for later phases.
+ */
+export const ORDER_DIGITAL_DELIVERY_STATUSES = [
+  "not_required",
+  "pending",
+  "reserved",
+  "partial",
+  "completed",
+  "failed",
+  "manual_review",
+  "cancelled",
+  "refunded",
+] as const;
+export type OrderDigitalDeliveryStatus =
+  (typeof ORDER_DIGITAL_DELIVERY_STATUSES)[number];
 
 /**
  * WooCommerce orders synced into a single store (tenant). Every row carries a
@@ -62,6 +83,20 @@ export const orders = pgTable(
     paymentMethod: text("payment_method"),
     // Dashboard-only operator notes. Never written by WooCommerce sync.
     internalNotes: text("internal_notes"),
+    // Digital fulfillment (Phase 17). Maintained by the assignment engine and
+    // NOT written by WooCommerce sync, so they persist across re-syncs. One of
+    // ORDER_DIGITAL_DELIVERY_STATUSES.
+    digitalDeliveryStatus: text("digital_delivery_status")
+      .notNull()
+      .default("not_required"),
+    // True once the engine has determined the order needs digital codes.
+    digitalDeliveryRequired: boolean("digital_delivery_required")
+      .notNull()
+      .default(false),
+    // Set when all required codes are assigned (status = completed).
+    digitalDeliveryCompletedAt: timestamp("digital_delivery_completed_at", {
+      withTimezone: true,
+    }),
     // When the order was placed in WooCommerce (distinct from our created_at).
     placedAt: timestamp("placed_at", { withTimezone: true }),
     // Last successful sync with WooCommerce, for bookkeeping.
@@ -94,6 +129,11 @@ export const orders = pgTable(
     storeStatusIdx: index("orders_store_status_idx").on(
       table.storeId,
       table.status,
+    ),
+    // Backs the digital delivery queue filter (Phase 17).
+    storeDigitalStatusIdx: index("orders_store_digital_status_idx").on(
+      table.storeId,
+      table.digitalDeliveryStatus,
     ),
   }),
 );

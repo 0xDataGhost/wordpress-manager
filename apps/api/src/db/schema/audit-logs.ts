@@ -33,6 +33,9 @@ export const AUDIT_ACTIONS = {
   DIGITAL_CODE_REVEALED: "digital_code_revealed",
   DIGITAL_CODE_STATUS_UPDATED: "digital_code_status_updated",
   DIGITAL_BATCH_CREATED: "digital_batch_created",
+  DIGITAL_CODES_ASSIGNED: "digital_codes_assigned",
+  DIGITAL_ASSIGNMENT_PARTIAL: "digital_assignment_partial",
+  DIGITAL_ASSIGNMENT_FAILED: "digital_assignment_failed",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
@@ -57,6 +60,7 @@ export const AUDIT_ENTITY_TYPES = {
   AI: "ai",
   DIGITAL_CODE: "digital_code",
   DIGITAL_BATCH: "digital_batch",
+  DIGITAL_DELIVERY: "digital_delivery",
 } as const;
 
 export type AuditEntityType =

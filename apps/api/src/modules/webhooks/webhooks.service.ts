@@ -3,11 +3,13 @@ import { db } from "../../db";
 import { logger } from "../../lib/logger";
 import { AppError } from "../../lib/errors";
 import { products } from "../../db/schema/products";
+import { orders } from "../../db/schema/orders";
 import {
   webhookEvents,
   type WebhookEventRow,
 } from "../../db/schema/webhook-events";
 import { touchLastSync } from "../connections/connections.service";
+import { maybeAssignCodesForOrder } from "../digital-delivery/digital-delivery.service";
 import { upsertCustomersFromWoo } from "../sync/customers.sync";
 import { upsertOrdersFromWoo } from "../sync/orders.sync";
 import { upsertProductsFromWoo } from "../sync/products.sync";
@@ -202,6 +204,25 @@ async function processOrderEvent(
   input: OrderWebhookInput,
 ): Promise<WebhookAction> {
   const result = await upsertOrdersFromWoo(storeId, [input.data]);
+
+  // Phase 17 integration seam: after the order is upserted, reserve/assign
+  // digital codes when its status makes products eligible. maybeAssignCodesForOrder
+  // is status-gated and fully best-effort (never throws), so it cannot fail the
+  // webhook; re-running on every order.updated is idempotent.
+  const [orderRow] = await db
+    .select({ id: orders.id })
+    .from(orders)
+    .where(
+      and(
+        eq(orders.storeId, storeId),
+        eq(orders.wpOrderId, input.data.wpOrderId),
+      ),
+    )
+    .limit(1);
+  if (orderRow) {
+    await maybeAssignCodesForOrder(storeId, orderRow.id);
+  }
+
   return result.created > 0 ? "created" : "updated";
 }
 

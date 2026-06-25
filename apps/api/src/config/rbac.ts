@@ -50,6 +50,14 @@ export const PERMISSIONS = [
     key: "digital_inventory.delete",
     description: "Permanently delete digital codes (prefer voiding instead)",
   },
+  {
+    key: "digital_delivery.view",
+    description: "View digital code assignments and the delivery queue",
+  },
+  {
+    key: "digital_delivery.assign",
+    description: "Assign digital codes to orders",
+  },
 ] as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[number]["key"];
@@ -104,6 +112,8 @@ export const SYSTEM_ROLES: SystemRoleDefinition[] = [
       "digital_inventory.import",
       "digital_inventory.reveal",
       "digital_inventory.export",
+      "digital_delivery.view",
+      "digital_delivery.assign",
     ],
   },
   {
@@ -133,6 +143,8 @@ export const SYSTEM_ROLES: SystemRoleDefinition[] = [
       "orders.edit",
       "customers.view",
       "digital_inventory.view",
+      "digital_delivery.view",
+      "digital_delivery.assign",
     ],
   },
   {
@@ -145,6 +157,7 @@ export const SYSTEM_ROLES: SystemRoleDefinition[] = [
       "customers.edit",
       "orders.view",
       "digital_inventory.view",
+      "digital_delivery.view",
     ],
   },
   {
@@ -175,6 +188,7 @@ export const SYSTEM_ROLES: SystemRoleDefinition[] = [
       "orders.view",
       "customers.view",
       "digital_inventory.view",
+      "digital_delivery.view",
     ],
   },
 ];
