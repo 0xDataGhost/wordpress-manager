@@ -167,8 +167,13 @@ Copy `.env.example` to `.env` and adjust:
 | `JWT_ACCESS_EXPIRES_IN` | `15m`                                                     | Access-token lifetime (e.g. `15m`, `1h`)   |
 | `JWT_REFRESH_EXPIRES_IN` | `7d`                                                     | Refresh-token lifetime (e.g. `7d`)         |
 
-> Generate strong secrets with `openssl rand -hex 32`. Startup fails fast if the
-> JWT secrets are missing or shorter than 32 characters.
+> Generate every secret in the correct format with **`npm run secrets:generate`**
+> (prints copy/paste env lines; never writes `.env`). Startup fails fast if the JWT
+> secrets are missing/short, or if `DIGITAL_CODE_ENCRYPTION_KEY` /
+> `CONNECTOR_ENCRYPTION_KEY` are present but do not decode to 32 bytes. The two
+> digital-code keys plus `CONNECTOR_ENCRYPTION_KEY` must be set **once, up front**
+> and **never rotated** after real data exists (rotation makes stored ciphertext
+> unrecoverable).
 
 ## Running the API
 
@@ -176,6 +181,9 @@ Copy `.env.example` to `.env` and adjust:
 cd apps/api
 npm install
 cp .env.example .env
+
+# Generate strong secrets and paste the lines you need into .env
+npm run secrets:generate
 
 # Start PostgreSQL + Redis locally (requires Docker)
 docker compose up -d

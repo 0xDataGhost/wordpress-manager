@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, ShieldAlert } from "lucide-react";
+import { ArrowRight, RefreshCw, ShieldAlert } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -13,6 +13,7 @@ import {
   type Batch,
   type Pagination,
 } from "@/lib/digital-inventory-api";
+import { listSuppliers, type SupplierListItem } from "@/lib/suppliers-api";
 import { formatDateTime } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
@@ -25,12 +26,25 @@ function formatCost(batch: Batch): string {
 export function DigitalBatchesPage() {
   const { hasPermission } = useAuth();
   const canView = hasPermission("digital_inventory.view");
+  const canViewSuppliers = hasPermission("digital_suppliers.view");
 
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<Batch[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [suppliers, setSuppliers] = useState<SupplierListItem[]>([]);
+
+  // Suppliers (best-effort, gated) resolve the supplier-id column to a name.
+  useEffect(() => {
+    if (!canView || !canViewSuppliers) return;
+    listSuppliers({ limit: 100 })
+      .then((res) => setSuppliers(res.items))
+      .catch(() => setSuppliers([]));
+  }, [canView, canViewSuppliers]);
+
+  const supplierName = (id: string | null): string | null =>
+    id ? (suppliers.find((s) => s.id === id)?.name ?? null) : null;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -73,6 +87,20 @@ export function DigitalBatchesPage() {
         </span>
       ),
     },
+    // Supplier name (gated by digital_suppliers.view) resolved from the list above.
+    ...(canViewSuppliers
+      ? ([
+          {
+            key: "supplier",
+            header: "المورد",
+            cell: (row) => (
+              <span className="text-sm text-muted-foreground">
+                {supplierName(row.supplierId) ?? "—"}
+              </span>
+            ),
+          },
+        ] as Column<Batch>[])
+      : []),
     {
       key: "quantityTotal",
       header: "إجمالي الأكواد",
@@ -87,6 +115,11 @@ export function DigitalBatchesPage() {
       key: "quantitySold",
       header: "المباع",
       cell: (row) => row.quantitySold,
+    },
+    {
+      key: "quantityDelivered",
+      header: "المُسلَّم",
+      cell: (row) => row.quantityDelivered,
     },
     {
       key: "cost",
@@ -123,12 +156,23 @@ export function DigitalBatchesPage() {
         title="دفعات الأكواد"
         description="الدفعات المستوردة من الأكواد الرقمية وكمياتها وتكاليفها."
         actions={
-          <Button variant="outline" asChild>
-            <Link to="/digital-inventory">
-              <ArrowRight className="h-4 w-4" />
-              رجوع للمخزون
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => void load()}
+              disabled={loading}
+              aria-label="تحديث"
+            >
+              <RefreshCw className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+              تحديث
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to="/digital-inventory">
+                <ArrowRight className="h-4 w-4" />
+                رجوع للمخزون
+              </Link>
+            </Button>
+          </div>
         }
       />
 

@@ -69,17 +69,18 @@ export interface CodeListItem {
   productName: string | null;
   batchId: string | null;
   batchName: string | null;
+  supplierId: string | null;
   /** Masked preview only (e.g. "ABCD••••WXYZ"); never the full code. */
   codePreview: string | null;
   status: DigitalCodeStatus;
+  /** Exact-decimal unit cost (operational, not secret), or null. */
+  costPrice: string | null;
+  currency: string | null;
   expiresAt: string | null;
   createdAt: string;
 }
 
 export interface CodeDetails extends CodeListItem {
-  supplierId: string | null;
-  costPrice: string | null;
-  currency: string | null;
   updatedAt: string;
 }
 
@@ -98,14 +99,18 @@ export interface CodeListResult {
 export interface ListCodesQuery {
   productId?: string;
   batchId?: string;
+  supplierId?: string;
   status?: DigitalCodeStatus;
   search?: string;
+  /** Inclusive upper bound on expiry (YYYY-MM-DD). */
+  expiresBefore?: string;
   page?: number;
   limit?: number;
 }
 
 export interface ImportCodesInput {
   productId: string;
+  supplierId?: string;
   batchName?: string;
   codesText: string;
   source?: string;
@@ -190,8 +195,10 @@ export async function listCodes(
     query: {
       productId: query.productId,
       batchId: query.batchId,
+      supplierId: query.supplierId,
       status: query.status,
       search: query.search,
+      expiresBefore: query.expiresBefore,
       page: query.page,
       limit: query.limit,
     },

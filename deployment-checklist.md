@@ -21,9 +21,11 @@ React Dashboard (static) ──HTTPS──> Express API ──> PostgreSQL
 
 ## 1. Pre-Deploy — Secrets & Config (REQUIRED)
 
+- [ ] **Generate all secrets** in the correct format: run **`npm run secrets:generate`** in `apps/api` and copy the lines you need into the environment. It uses a CSPRNG, prints copy/paste env lines, and **never writes `.env`**.
 - [ ] **`CORS_ORIGIN`** set to the exact dashboard origin (comma-separated if several). ⚠️ The API now **refuses to boot in production if this is `*`**.
-- [ ] **`JWT_ACCESS_SECRET`** and **`JWT_REFRESH_SECRET`** — generate fresh, unique, ≥32 chars each: `openssl rand -hex 32`. **Never reuse dev/example values.**
-- [ ] **`CONNECTOR_ENCRYPTION_KEY`** — `openssl rand -hex 32`. Required for product publish + WooCommerce pull sync. If unset, those paths return a clear "not configured" error (API still boots).
+- [ ] **`JWT_ACCESS_SECRET`** and **`JWT_REFRESH_SECRET`** — fresh, unique, ≥32 chars each. **Never reuse dev/example values.**
+- [ ] **`CONNECTOR_ENCRYPTION_KEY`** — AES-256 (64 hex / 32-byte base64). Required for product publish + WooCommerce pull sync. Unset → those paths return "not configured" (API still boots); a malformed value **fails fast at boot**. ⚠️ Rotating orphans every stored connector key.
+- [ ] **`DIGITAL_CODE_ENCRYPTION_KEY`** and **`DIGITAL_CODE_HASH_KEY`** — required for digital code import/reveal. Encryption key is AES-256 (64 hex / 32-byte base64; malformed → fails fast at boot); hash key is a strong random secret. ⚠️ **Set once, up front — NEVER rotate after real codes are imported** (rotation makes codes undecryptable / breaks dedup).
 - [ ] **`DATABASE_URL`** — points at the production PostgreSQL (TLS where available).
 - [ ] **`REDIS_URL`** — production Redis (auth/TLS where available).
 - [ ] **`NODE_ENV=production`**.

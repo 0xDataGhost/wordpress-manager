@@ -50,14 +50,21 @@ test("toCodeListItemDto exposes only masked, non-secret fields", () => {
     "batchId",
     "batchName",
     "codePreview",
+    "costPrice",
     "createdAt",
+    "currency",
     "expiresAt",
     "id",
     "productId",
     "productName",
     "status",
+    "supplierId",
   ]);
   assert.equal(dto.codePreview, "PLAI••••PEAR");
+  // Operational (non-secret) fields needed by the inventory table.
+  assert.equal(dto.costPrice, "2.5000");
+  assert.equal(dto.currency, "USD");
+  assert.equal(dto.supplierId, null);
 });
 
 test("list DTO never carries cipher / iv / tag / hash or raw code", () => {

@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  AlertTriangle,
   Boxes,
   CheckCircle2,
   Eye,
   KeyRound,
   Layers,
   PackageCheck,
+  RefreshCw,
   ShieldAlert,
   ShoppingCart,
   Upload,
@@ -42,7 +44,8 @@ import {
   listBatches,
 } from "@/lib/digital-inventory-api";
 import { listProducts, type ProductDto } from "@/lib/products-api";
-import { formatDateTime } from "@/lib/utils";
+import { listSuppliers, type SupplierListItem } from "@/lib/suppliers-api";
+import { formatDateTime, formatMoney } from "@/lib/utils";
 
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -59,10 +62,13 @@ export function DigitalInventoryPage() {
   const canImport = hasPermission("digital_inventory.import");
   const canReveal = hasPermission("digital_inventory.reveal");
   const canEdit = hasPermission("digital_inventory.edit");
+  const canViewSuppliers = hasPermission("digital_suppliers.view");
 
   const [productId, setProductId] = useState("all");
   const [status, setStatus] = useState<DigitalCodeStatus | "all">("all");
   const [batchId, setBatchId] = useState("all");
+  const [supplierId, setSupplierId] = useState("all");
+  const [expiresBefore, setExpiresBefore] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -75,6 +81,7 @@ export function DigitalInventoryPage() {
 
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierListItem[]>([]);
 
   const [importOpen, setImportOpen] = useState(false);
   const [detailsId, setDetailsId] = useState<string | null>(null);
@@ -101,6 +108,23 @@ export function DigitalInventoryPage() {
       .catch(() => setBatches([]));
   }, [canView]);
 
+  // Suppliers power the supplier filter/column + import selector. Only fetched
+  // when the user can view suppliers (otherwise the endpoint 403s); best-effort.
+  useEffect(() => {
+    if (!canView || !canViewSuppliers) return;
+    listSuppliers({ limit: 100 })
+      .then((res) => setSuppliers(res.items))
+      .catch(() => setSuppliers([]));
+  }, [canView, canViewSuppliers]);
+
+  const supplierName = useCallback(
+    (id: string | null): string | null => {
+      if (!id) return null;
+      return suppliers.find((s) => s.id === id)?.name ?? null;
+    },
+    [suppliers],
+  );
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(false);
@@ -111,8 +135,10 @@ export function DigitalInventoryPage() {
         listCodes({
           productId: scopedProduct,
           batchId: batchId === "all" ? undefined : batchId,
+          supplierId: supplierId === "all" ? undefined : supplierId,
           status: status === "all" ? undefined : status,
           search: search || undefined,
+          expiresBefore: expiresBefore || undefined,
           page,
           limit: PAGE_SIZE,
         }),
@@ -125,7 +151,7 @@ export function DigitalInventoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [productId, batchId, status, search, page]);
+  }, [productId, batchId, supplierId, status, search, expiresBefore, page]);
 
   useEffect(() => {
     if (!canView) {
@@ -166,6 +192,32 @@ export function DigitalInventoryPage() {
       cell: (row) => (
         <span className="text-sm text-muted-foreground">
           {row.batchName ?? "—"}
+        </span>
+      ),
+    },
+    // Supplier column is only shown to roles that can view suppliers (RBAC):
+    // the name is resolved from the suppliers list loaded above.
+    ...(canViewSuppliers
+      ? ([
+          {
+            key: "supplier",
+            header: "المورد",
+            cell: (row) => (
+              <span className="text-sm text-muted-foreground">
+                {supplierName(row.supplierId) ?? "—"}
+              </span>
+            ),
+          },
+        ] as Column<CodeListItem>[])
+      : []),
+    {
+      key: "cost",
+      header: "التكلفة",
+      cell: (row) => (
+        <span dir="ltr" className="text-sm">
+          {row.costPrice
+            ? formatMoney(row.costPrice, row.currency ?? "SAR")
+            : "—"}
         </span>
       ),
     },
@@ -263,6 +315,15 @@ export function DigitalInventoryPage() {
         description="تابع أكواد المنتجات الرقمية، استورد دفعات جديدة، واكشف الأكواد بشكل آمن."
         actions={
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => void load()}
+              disabled={loading}
+              aria-label="تحديث"
+            >
+              <RefreshCw className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+              تحديث
+            </Button>
             <Button variant="outline" asChild>
               <Link to="/digital-inventory/batches">
                 <Layers className="h-4 w-4" />
@@ -279,14 +340,38 @@ export function DigitalInventoryPage() {
         }
       />
 
-      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
         <StatsCard title="إجمالي الأكواد" value={summary?.totalCodes ?? 0} icon={Boxes} />
         <StatsCard title="المتاح" value={summary?.available ?? 0} icon={CheckCircle2} />
         <StatsCard title="المحجوز" value={summary?.reserved ?? 0} icon={Layers} />
         <StatsCard title="المباع" value={summary?.sold ?? 0} icon={ShoppingCart} />
         <StatsCard title="المسلم" value={summary?.delivered ?? 0} icon={PackageCheck} />
         <StatsCard title="غير صالح" value={summary?.invalid ?? 0} icon={XCircle} />
+        <StatsCard
+          title="منخفض المخزون"
+          value={summary?.lowStockProducts.length ?? 0}
+          icon={AlertTriangle}
+        />
       </div>
+
+      {summary && summary.lowStockProducts.length > 0 ? (
+        <div className="mb-6 rounded-lg border border-warning/40 bg-warning/10 p-4">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-warning">
+            <AlertTriangle className="h-4 w-4" />
+            منتجات منخفضة المخزون
+          </div>
+          <ul className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
+            {summary.lowStockProducts.map((p) => (
+              <li key={p.productId}>
+                <span className="font-medium text-foreground">
+                  {p.productName ?? "—"}
+                </span>{" "}
+                — متاح {p.available} / الحد {p.threshold}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <FilterBar>
         <SearchInput
@@ -343,6 +428,36 @@ export function DigitalInventoryPage() {
             </option>
           ))}
         </select>
+        {canViewSuppliers && suppliers.length > 0 ? (
+          <select
+            aria-label="تصفية حسب المورد"
+            value={supplierId}
+            onChange={(e) => {
+              setSupplierId(e.target.value);
+              setPage(1);
+            }}
+            className={filterSelectClass}
+          >
+            <option value="all">كل الموردين</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        ) : null}
+        <input
+          type="date"
+          aria-label="تنتهي قبل تاريخ"
+          title="تنتهي قبل تاريخ"
+          dir="ltr"
+          value={expiresBefore}
+          onChange={(e) => {
+            setExpiresBefore(e.target.value);
+            setPage(1);
+          }}
+          className={filterSelectClass}
+        />
       </FilterBar>
 
       <DataTable
@@ -387,6 +502,7 @@ export function DigitalInventoryPage() {
           open={importOpen}
           onOpenChange={setImportOpen}
           products={products}
+          suppliers={suppliers}
           onImported={() => void load()}
         />
       ) : null}

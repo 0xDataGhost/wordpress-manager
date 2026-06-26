@@ -16,16 +16,17 @@ export interface CodeListItemDto {
   productName: string | null;
   batchId: string | null;
   batchName: string | null;
+  supplierId: string | null;
   codePreview: string | null;
   status: string;
+  /** Exact-decimal unit cost (operational, not secret), or null. */
+  costPrice: string | null;
+  currency: string | null;
   expiresAt: Date | null;
   createdAt: Date;
 }
 
 export interface CodeDetailsDto extends CodeListItemDto {
-  supplierId: string | null;
-  costPrice: string | null;
-  currency: string | null;
   updatedAt: Date;
 }
 
@@ -43,8 +44,11 @@ export function toCodeListItemDto(row: CodeRowWithNames): CodeListItemDto {
     productName: row.productName,
     batchId: row.code.batchId,
     batchName: row.batchName,
+    supplierId: row.code.supplierId,
     codePreview: row.code.codePreview,
     status: row.code.status,
+    costPrice: row.code.costPrice,
+    currency: row.code.currency,
     expiresAt: row.code.expiresAt,
     createdAt: row.code.createdAt,
   };
@@ -53,9 +57,6 @@ export function toCodeListItemDto(row: CodeRowWithNames): CodeListItemDto {
 export function toCodeDetailsDto(row: CodeRowWithNames): CodeDetailsDto {
   return {
     ...toCodeListItemDto(row),
-    supplierId: row.code.supplierId,
-    costPrice: row.code.costPrice,
-    currency: row.code.currency,
     updatedAt: row.code.updatedAt,
   };
 }

@@ -17,11 +17,14 @@ import {
   type ImportResult,
 } from "@/lib/digital-inventory-api";
 import type { ProductDto } from "@/lib/products-api";
+import type { SupplierListItem } from "@/lib/suppliers-api";
 
 interface ImportCodesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   products: ProductDto[];
+  /** Active suppliers for the optional supplier selector (empty = hidden). */
+  suppliers?: SupplierListItem[];
   /** Called after a successful import so the page can refresh its data. */
   onImported: () => void;
 }
@@ -39,9 +42,11 @@ export function ImportCodesDialog({
   open,
   onOpenChange,
   products,
+  suppliers = [],
   onImported,
 }: ImportCodesDialogProps) {
   const [productId, setProductId] = useState("");
+  const [supplierId, setSupplierId] = useState("");
   const [batchName, setBatchName] = useState("");
   const [codesText, setCodesText] = useState("");
   const [costPerCode, setCostPerCode] = useState("");
@@ -57,6 +62,7 @@ export function ImportCodesDialog({
   useEffect(() => {
     if (open) {
       setProductId("");
+      setSupplierId("");
       setBatchName("");
       setCodesText("");
       setCostPerCode("");
@@ -84,6 +90,7 @@ export function ImportCodesDialog({
       const parsedCost = costPerCode.trim() === "" ? undefined : Number(costPerCode);
       const imported = await importCodes({
         productId,
+        supplierId: supplierId || undefined,
         batchName: batchName.trim() || undefined,
         codesText,
         costPerCode:
@@ -161,6 +168,26 @@ export function ImportCodesDialog({
                 ))}
               </select>
             </div>
+
+            {suppliers.length > 0 ? (
+              <div className="space-y-2">
+                <Label htmlFor="import-supplier">المورد (اختياري)</Label>
+                <select
+                  id="import-supplier"
+                  className={inputClass}
+                  value={supplierId}
+                  onChange={(e) => setSupplierId(e.target.value)}
+                  disabled={submitting}
+                >
+                  <option value="">— بدون مورد —</option>
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor="import-batch-name">اسم الدفعة</Label>

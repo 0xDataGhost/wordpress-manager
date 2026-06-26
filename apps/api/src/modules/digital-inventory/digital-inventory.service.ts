@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, ilike, isNotNull, lte, or, sql } from "drizzle-orm";
 import { db } from "../../db";
 import {
   codeBatches,
@@ -141,7 +141,15 @@ export async function listCodes(
   const conditions = [eq(digitalCodes.storeId, storeId)];
   if (query.productId) conditions.push(eq(digitalCodes.productId, query.productId));
   if (query.batchId) conditions.push(eq(digitalCodes.batchId, query.batchId));
+  if (query.supplierId) {
+    conditions.push(eq(digitalCodes.supplierId, query.supplierId));
+  }
   if (query.status) conditions.push(eq(digitalCodes.status, query.status));
+  if (query.expiresBefore) {
+    // Only codes that actually have an expiry on/before the bound.
+    conditions.push(isNotNull(digitalCodes.expiresAt));
+    conditions.push(lte(digitalCodes.expiresAt, query.expiresBefore));
+  }
   if (query.search) {
     const term = `%${escapeLike(query.search)}%`;
     const match = or(

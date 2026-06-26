@@ -84,6 +84,21 @@ Legend: **Required** = boot fails if missing · **Optional** = has a safe defaul
 | `OPENAI_BASE_URL` | Optional | `https://api.openai.com/v1` | valid URL |
 | `AI_REQUEST_TIMEOUT_MS` | Optional | `30000` | positive int — AI call timeout |
 
+### Digital code inventory (Phase 16)
+
+Digital codes are encrypted at rest (AES-256-GCM) and de-duplicated via a keyed HMAC-SHA256 fingerprint. Both keys live only in the environment, never in the database. Generate all secrets with `npm run secrets:generate`.
+
+| Variable | Req | Default | Bounds / Notes |
+|---|---|---|---|
+| `DIGITAL_CODE_ENCRYPTION_KEY` | Optional* | — | **AES-256 — must decode to 32 bytes (64 hex chars or base64).** A PRESENT but malformed value fails fast at boot; blank/unset disables the digital module (import/reveal return "not configured"). ⚠️ **Never rotate after real codes are imported** — stored ciphertext becomes permanently undecryptable. |
+| `DIGITAL_CODE_HASH_KEY` | Optional* | — | Strong random secret, used **verbatim** as the HMAC key (no fixed format; only non-emptiness enforced). ⚠️ **Never rotate after real codes exist** — it breaks duplicate detection. |
+| `DIGITAL_CODE_IMPORT_MAX_CODES` | Optional | `5000` | int 1–100000 — max codes per import request |
+| `DIGITAL_CODE_REVEAL_RATE_LIMIT_ENABLED` | Optional | `true` | `true` \| `false` — per-IP limiter on the code-reveal endpoint |
+| `DIGITAL_CODE_REVEAL_RATE_LIMIT_WINDOW_SECONDS` | Optional | `60` | positive int |
+| `DIGITAL_CODE_REVEAL_RATE_LIMIT_MAX` | Optional | `20` | positive int — reveals per window before 429 |
+
+\* Functionally required (both) to use digital fulfillment; the API still boots without them.
+
 ### Graceful shutdown
 
 | Variable | Req | Default | Bounds / Notes |
@@ -116,11 +131,13 @@ NODE_ENV=production
 CORS_ORIGIN=https://dashboard.example.com      # NOT "*" — boot fails otherwise
 DATABASE_URL=postgresql://app:***@db:5432/saas_dashboard
 REDIS_URL=redis://redis:6379
-JWT_ACCESS_SECRET=<openssl rand -hex 32>
-JWT_REFRESH_SECRET=<openssl rand -hex 32>
-CONNECTOR_ENCRYPTION_KEY=<openssl rand -hex 32>   # required for publish/sync
+JWT_ACCESS_SECRET=<64-hex>
+JWT_REFRESH_SECRET=<64-hex>
+CONNECTOR_ENCRYPTION_KEY=<64-hex>         # required for publish/sync
+DIGITAL_CODE_ENCRYPTION_KEY=<64-hex>      # required for digital code import/reveal
+DIGITAL_CODE_HASH_KEY=<strong-random>    # required for digital code import/reveal
 # Dashboard build:
 VITE_API_URL=https://api.example.com
 ```
 
-Generate secrets with: `openssl rand -hex 32`. See `deployment-checklist.md` for the full deploy sequence.
+Generate every secret in the correct format with **`npm run secrets:generate`** (run in `apps/api`; prints copy/paste env lines, never writes `.env`). The two `*_ENCRYPTION_KEY` values must decode to exactly 32 bytes — a malformed value fails fast at boot. ⚠️ `DIGITAL_CODE_ENCRYPTION_KEY` / `DIGITAL_CODE_HASH_KEY` / `CONNECTOR_ENCRYPTION_KEY` must be set **once, up front** and never rotated after real data exists. See `deployment-checklist.md` for the full deploy sequence.

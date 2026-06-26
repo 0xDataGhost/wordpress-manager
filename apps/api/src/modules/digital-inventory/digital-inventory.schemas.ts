@@ -35,8 +35,12 @@ export type ImportCodesInput = z.infer<typeof importCodesSchema>;
 export const listCodesQuerySchema = z.object({
   productId: z.string().uuid().optional(),
   batchId: z.string().uuid().optional(),
+  supplierId: z.string().uuid().optional(),
   status: z.enum(DIGITAL_CODE_STATUSES).optional(),
   search: z.string().trim().max(200).optional(),
+  // Inclusive upper bound on expiry (YYYY-MM-DD): match codes that have an
+  // expiry on/before this date. Codes with no expiry are excluded.
+  expiresBefore: z.coerce.date().optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
