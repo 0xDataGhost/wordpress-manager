@@ -113,9 +113,9 @@ const DigitalReportsPage = lazy(() =>
     default: m.DigitalReportsPage,
   })),
 );
-const PlaceholderPage = lazy(() =>
-  import("@/pages/PlaceholderPage").then((m) => ({
-    default: m.PlaceholderPage,
+const TeamPage = lazy(() =>
+  import("@/pages/team/TeamPage").then((m) => ({
+    default: m.TeamPage,
   })),
 );
 const NotFoundPage = lazy(() =>
@@ -150,12 +150,7 @@ export function AppRoutes() {
             <Route path="/orders/:id" element={<OrderDetailsPage />} />
             <Route path="/customers" element={<CustomersListPage />} />
             <Route path="/customers/:id" element={<CustomerDetailsPage />} />
-            <Route
-              path="/team"
-              element={
-                <PlaceholderPage title="الموظفين والصلاحيات" phase="المرحلة 3" />
-              }
-            />
+            <Route path="/team" element={<TeamPage />} />
             <Route path="/automations" element={<AutomationsListPage />} />
             <Route path="/ai" element={<AIAssistantsPage />} />
             <Route path="/notifications" element={<NotificationsListPage />} />
