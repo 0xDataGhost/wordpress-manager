@@ -2,8 +2,10 @@ import { z } from "zod";
 import { ValidationError } from "../../lib/errors";
 import {
   AUTOMATION_TYPES,
+  DIGITAL_AUTOMATION_TYPES,
   type AutomationType,
 } from "../../db/schema/automations";
+import { ORDER_STATUSES } from "../../db/schema/orders";
 
 /**
  * Canonical display order of the Phase 11 automations. Provisioning and the
@@ -15,6 +17,34 @@ export const AUTOMATION_TYPE_ORDER: AutomationType[] = [
   "daily_sales_report",
   "whatsapp_order_message",
 ];
+
+/**
+ * Display/provisioning order of the Phase 23 digital automations. Kept separate
+ * from AUTOMATION_TYPE_ORDER so the dashboard can render them under their own
+ * "أتمتة المنتجات الرقمية" section while still provisioning every type.
+ */
+export const DIGITAL_AUTOMATION_TYPE_ORDER: AutomationType[] = [
+  ...DIGITAL_AUTOMATION_TYPES,
+];
+
+/** Every automation type in provisioning/display order (classic then digital). */
+export const ALL_AUTOMATION_TYPE_ORDER: AutomationType[] = [
+  ...AUTOMATION_TYPE_ORDER,
+  ...DIGITAL_AUTOMATION_TYPE_ORDER,
+];
+
+/** True when the value is a valid WooCommerce order status (ORDER_STATUSES). */
+function isOrderStatus(value: string): boolean {
+  return (ORDER_STATUSES as readonly string[]).includes(value);
+}
+
+/** A non-empty list of valid WooCommerce order statuses (no duplicates kept). */
+const orderStatusListSchema = z
+  .array(z.string().trim().min(1))
+  .min(1, "Provide at least one order status")
+  .refine((arr) => arr.every(isOrderStatus), {
+    message: "statuses must be valid WooCommerce order statuses",
+  });
 
 /* ----------------------------- Per-type config ---------------------------- */
 
@@ -44,10 +74,93 @@ export const whatsappConfigSchema = z
   .strict();
 export type WhatsappConfig = z.infer<typeof whatsappConfigSchema>;
 
+/* --------------------- Phase 23 digital automations ----------------------- */
+/*
+ * Each schema validates the per-type config EXCEPT `enabled`: in this codebase
+ * `enabled` is the automation row's column (the operational switch checked by
+ * the run helpers), not a config key — so the plan's per-automation `enabled`
+ * field maps to that column (same as the Phase 11 automations).
+ */
+
+/** Digital Low Stock: alert digital products at/under a per-product or global threshold. */
+export const digitalLowStockConfigSchema = z
+  .object({
+    thresholdMode: z.enum(["product_setting", "global"]).default("product_setting"),
+    globalThreshold: z.coerce.number().int().min(0).max(1_000_000).optional(),
+  })
+  .strict()
+  .refine(
+    (c) => c.thresholdMode !== "global" || typeof c.globalThreshold === "number",
+    {
+      message: "globalThreshold is required when thresholdMode is 'global'",
+      path: ["globalThreshold"],
+    },
+  );
+export type DigitalLowStockConfig = z.infer<typeof digitalLowStockConfigSchema>;
+
+/** Digital Out Of Stock: alert when a digital product's available pool hits zero. */
+export const digitalOutOfStockConfigSchema = z
+  .object({
+    // Advisory role names surfaced in the notification metadata (notifications
+    // are store-scoped, so this does not restrict who can see them).
+    notifyRoles: z.array(z.string().trim().min(1).max(100)).max(20).optional(),
+  })
+  .strict();
+export type DigitalOutOfStockConfig = z.infer<
+  typeof digitalOutOfStockConfigSchema
+>;
+
+/** Digital Failed Delivery: alert when a delivery has failed at least N times. */
+export const digitalFailedDeliveryConfigSchema = z
+  .object({
+    maxAttempts: z.coerce.number().int().min(1).max(100),
+  })
+  .strict();
+export type DigitalFailedDeliveryConfig = z.infer<
+  typeof digitalFailedDeliveryConfigSchema
+>;
+
+/** Digital Replacement Rate: alert when the replacement rate exceeds a ceiling. */
+export const digitalReplacementRateConfigSchema = z
+  .object({
+    windowDays: z.coerce.number().int().min(1).max(365),
+    maxReplacementRate: z.coerce.number().min(0).max(1),
+  })
+  .strict();
+export type DigitalReplacementRateConfig = z.infer<
+  typeof digitalReplacementRateConfigSchema
+>;
+
+/** Auto Assign Codes: reserve/assign codes for paid orders in the given statuses. */
+export const autoAssignCodesConfigSchema = z
+  .object({
+    statuses: orderStatusListSchema,
+    allowPartial: z.boolean(),
+  })
+  .strict();
+export type AutoAssignCodesConfig = z.infer<typeof autoAssignCodesConfigSchema>;
+
+/** Auto Deliver Codes: deliver assigned codes for paid orders in the given statuses. */
+export const autoDeliverCodesConfigSchema = z
+  .object({
+    statuses: orderStatusListSchema,
+    channel: z.enum(["customer_link", "dashboard"]),
+  })
+  .strict();
+export type AutoDeliverCodesConfig = z.infer<
+  typeof autoDeliverCodesConfigSchema
+>;
+
 const CONFIG_SCHEMA_BY_TYPE: Record<AutomationType, z.ZodTypeAny> = {
   low_stock_alert: lowStockConfigSchema,
   daily_sales_report: dailyReportConfigSchema,
   whatsapp_order_message: whatsappConfigSchema,
+  digital_low_stock_alert: digitalLowStockConfigSchema,
+  digital_out_of_stock_alert: digitalOutOfStockConfigSchema,
+  digital_failed_delivery_alert: digitalFailedDeliveryConfigSchema,
+  digital_replacement_rate_alert: digitalReplacementRateConfigSchema,
+  auto_assign_codes_on_paid_order: autoAssignCodesConfigSchema,
+  auto_deliver_codes_on_paid_order: autoDeliverCodesConfigSchema,
 };
 
 /**
@@ -65,6 +178,18 @@ export const AUTOMATION_DEFAULTS: Record<
     message_template:
       "مرحباً {{customer_name}}، شكراً لطلبك رقم {{order_number}}. " +
       "إجمالي الطلب {{order_total}}. سنبدأ بتجهيزه قريباً.",
+  },
+  digital_low_stock_alert: { thresholdMode: "product_setting" },
+  digital_out_of_stock_alert: { notifyRoles: [] },
+  digital_failed_delivery_alert: { maxAttempts: 1 },
+  digital_replacement_rate_alert: { windowDays: 7, maxReplacementRate: 0.05 },
+  auto_assign_codes_on_paid_order: {
+    statuses: ["processing", "completed"],
+    allowPartial: false,
+  },
+  auto_deliver_codes_on_paid_order: {
+    statuses: ["processing", "completed"],
+    channel: "customer_link",
   },
 };
 

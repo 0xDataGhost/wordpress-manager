@@ -207,6 +207,20 @@ if (isProduction && env.CORS_ORIGIN === "*") {
   process.exit(1);
 }
 
+// Digital code key pair consistency guard: the two keys must be set together.
+// Having one but not the other is an operator error — import would silently
+// appear to work but the module gate in digital-inventory.import would throw
+// at the first request. Fail fast at boot so the problem is visible immediately.
+if (
+  (env.DIGITAL_CODE_ENCRYPTION_KEY && !env.DIGITAL_CODE_HASH_KEY) ||
+  (!env.DIGITAL_CODE_ENCRYPTION_KEY && env.DIGITAL_CODE_HASH_KEY)
+) {
+  console.error(
+    "Invalid configuration: DIGITAL_CODE_ENCRYPTION_KEY and DIGITAL_CODE_HASH_KEY must both be set or both be unset.",
+  );
+  process.exit(1);
+}
+
 /** Allowed CORS origins resolved to a value the `cors` package understands. */
 export const corsOrigin: true | string[] =
   env.CORS_ORIGIN === "*"

@@ -21,7 +21,12 @@ export type NotificationType =
   | "failed_sync"
   | "failed_automation"
   | "daily_report"
-  | "whatsapp_order_message";
+  | "whatsapp_order_message"
+  | "digital_inventory"
+  | "digital_low_stock"
+  | "digital_out_of_stock"
+  | "digital_delivery_failed"
+  | "digital_replacement_rate";
 
 /** Severity drives the badge tone + card accent. */
 export type NotificationSeverity = "info" | "success" | "warning" | "error";

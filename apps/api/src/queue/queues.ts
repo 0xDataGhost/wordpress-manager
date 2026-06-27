@@ -48,6 +48,30 @@ export const AUTOMATION_JOB_NAMES = {
 } as const;
 
 /**
+ * Phase 23 digital-automation queues + job names (plan2 §23). Registered as
+ * foundation only — like the Phase 11 automations, the digital run helpers
+ * (automations.service) execute SYNCHRONOUSLY and no worker drains these queues
+ * yet. The constants are the seam a future worker will consume; the helpers
+ * REUSE the assignment/delivery/customer-link engines rather than re-enqueuing.
+ */
+export const DIGITAL_AUTOMATION_QUEUE_NAMES = {
+  digitalInventory: "digital_inventory",
+  digitalDelivery: "digital_delivery",
+} as const;
+
+export type DigitalAutomationQueueName =
+  (typeof DIGITAL_AUTOMATION_QUEUE_NAMES)[keyof typeof DIGITAL_AUTOMATION_QUEUE_NAMES];
+
+export const DIGITAL_AUTOMATION_JOB_NAMES = {
+  digitalLowStockCheck: "digital_low_stock_check",
+  digitalOutOfStockCheck: "digital_out_of_stock_check",
+  digitalFailedDeliveryCheck: "digital_failed_delivery_check",
+  digitalReplacementRateCheck: "digital_replacement_rate_check",
+  autoAssignCodes: "auto_assign_codes",
+  autoDeliverCodes: "auto_deliver_codes",
+} as const;
+
+/**
  * Phase 13 webhook job names. Incremental-sync webhooks reuse the existing
  * per-entity sync queues (sync_products / sync_orders / sync_customers) rather
  * than introducing new queues. Like the Phase 6 sync, processing currently runs
@@ -94,12 +118,15 @@ export interface PublishProductJobData {
   productId: string;
 }
 
-/** Registers every Phase 6 + Phase 11 queue. Safe to call once at boot (idempotent). */
+/** Registers every Phase 6 + Phase 11 + Phase 23 queue. Idempotent (safe at boot). */
 export function registerQueues(): void {
   for (const name of Object.values(QUEUE_NAMES)) {
     createQueue(name);
   }
   for (const name of Object.values(AUTOMATION_QUEUE_NAMES)) {
+    createQueue(name);
+  }
+  for (const name of Object.values(DIGITAL_AUTOMATION_QUEUE_NAMES)) {
     createQueue(name);
   }
 }

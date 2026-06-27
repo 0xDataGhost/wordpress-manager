@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Star } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -36,6 +37,7 @@ export function SuppliersListPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<SupplierStatus | "">("");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -46,7 +48,7 @@ export function SuppliersListPage() {
     try {
       const result = await listSuppliers({
         status: status || undefined,
-        search: search.trim() || undefined,
+        search: debouncedSearch.trim() || undefined,
         page,
         limit: PAGE_SIZE,
       });
@@ -57,7 +59,7 @@ export function SuppliersListPage() {
     } finally {
       setLoading(false);
     }
-  }, [status, search, page]);
+  }, [status, debouncedSearch, page]);
 
   useEffect(() => {
     if (!canView) return;
@@ -66,7 +68,7 @@ export function SuppliersListPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [status, search]);
+  }, [status, debouncedSearch]);
 
   if (!canView) {
     return (

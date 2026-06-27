@@ -15,10 +15,36 @@ import { stores } from "./stores";
  * automations can be introduced without a migration), but this list is the
  * source of truth for provisioning, config validation and the dashboard labels.
  */
-export const AUTOMATION_TYPES = [
+export const CLASSIC_AUTOMATION_TYPES = [
   "low_stock_alert",
   "daily_sales_report",
   "whatsapp_order_message",
+] as const;
+
+/**
+ * The Phase 23 digital-product automations (plan2 §23). Note: the plan lists a
+ * seventh type `digital_supplier_quality_alert`; it is intentionally OUT OF SCOPE
+ * for this phase and not implemented here.
+ *
+ * As with the classic types, `enabled` is modelled as the automation row's
+ * `enabled` COLUMN (the operational switch), not a config key — the plan's
+ * per-automation `enabled` field maps to that column, mirroring how the Phase 11
+ * automations work. Each type's remaining config is validated per-type in the
+ * service (see automations.config).
+ */
+export const DIGITAL_AUTOMATION_TYPES = [
+  "digital_low_stock_alert",
+  "digital_out_of_stock_alert",
+  "digital_failed_delivery_alert",
+  "digital_replacement_rate_alert",
+  "auto_assign_codes_on_paid_order",
+  "auto_deliver_codes_on_paid_order",
+] as const;
+export type DigitalAutomationType = (typeof DIGITAL_AUTOMATION_TYPES)[number];
+
+export const AUTOMATION_TYPES = [
+  ...CLASSIC_AUTOMATION_TYPES,
+  ...DIGITAL_AUTOMATION_TYPES,
 ] as const;
 export type AutomationType = (typeof AUTOMATION_TYPES)[number];
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, RotateCw } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -35,6 +36,7 @@ export function DigitalDeliveryQueuePage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<DigitalDeliveryStatus | "">("");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -44,7 +46,7 @@ export function DigitalDeliveryQueuePage() {
     try {
       const result = await getQueue({
         status: status || undefined,
-        search: search.trim() || undefined,
+        search: debouncedSearch.trim() || undefined,
         page,
         limit: PAGE_SIZE,
       });
@@ -55,7 +57,7 @@ export function DigitalDeliveryQueuePage() {
     } finally {
       setLoading(false);
     }
-  }, [status, search, page]);
+  }, [status, debouncedSearch, page]);
 
   useEffect(() => {
     if (!canView) return;
@@ -65,7 +67,7 @@ export function DigitalDeliveryQueuePage() {
   // Reset to the first page when filters change.
   useEffect(() => {
     setPage(1);
-  }, [status, search]);
+  }, [status, debouncedSearch]);
 
   if (!canView) {
     return (

@@ -26,6 +26,7 @@ React Dashboard (static) ──HTTPS──> Express API ──> PostgreSQL
 - [ ] **`JWT_ACCESS_SECRET`** and **`JWT_REFRESH_SECRET`** — fresh, unique, ≥32 chars each. **Never reuse dev/example values.**
 - [ ] **`CONNECTOR_ENCRYPTION_KEY`** — AES-256 (64 hex / 32-byte base64). Required for product publish + WooCommerce pull sync. Unset → those paths return "not configured" (API still boots); a malformed value **fails fast at boot**. ⚠️ Rotating orphans every stored connector key.
 - [ ] **`DIGITAL_CODE_ENCRYPTION_KEY`** and **`DIGITAL_CODE_HASH_KEY`** — required for digital code import/reveal. Encryption key is AES-256 (64 hex / 32-byte base64; malformed → fails fast at boot); hash key is a strong random secret. ⚠️ **Set once, up front — NEVER rotate after real codes are imported** (rotation makes codes undecryptable / breaks dedup).
+- [ ] **`CUSTOMER_TOKEN_HASH_KEY`** — dedicated HMAC secret for customer self-service portal tokens. **MUST NOT reuse `DIGITAL_CODE_HASH_KEY`.** Unset → customer link generation returns "not configured" (API still boots). Use a strong random value (`npm run secrets:generate`).
 - [ ] **`DATABASE_URL`** — points at the production PostgreSQL (TLS where available).
 - [ ] **`REDIS_URL`** — production Redis (auth/TLS where available).
 - [ ] **`NODE_ENV=production`**.
@@ -36,9 +37,10 @@ React Dashboard (static) ──HTTPS──> Express API ──> PostgreSQL
 ## 2. Database (REQUIRED)
 
 - [ ] Provision PostgreSQL 16 (matches `docker-compose.yml`).
-- [ ] Apply all migrations through **`0011`**: `npm run db:migrate` (uses `DATABASE_URL`).
-- [ ] Seed the RBAC catalog + system roles: `npm run db:seed` (idempotent).
-- [ ] Verify migration `0011` created the 13 new indexes (`\di` in psql, or check `order_items_order_idx` exists).
+- [ ] Apply all migrations through **`0017`**: `npm run db:migrate` (uses `DATABASE_URL`).
+- [ ] Seed the RBAC catalog + system roles: `npm run db:seed` (idempotent — safe to re-run; provisions new permissions added in Phases 20.5, 22, and 23).
+- [ ] Verify migration `0017` tables exist: `customer_access_tokens`, `customer_code_views` (`\dt` in psql).
+- [ ] Verify migration `0011` created the 13 performance indexes (`\di` in psql, check `order_items_order_idx` exists).
 - [ ] Confirm a non-superuser app role is used by the API (least privilege).
 
 ## 3. Redis (REQUIRED)
@@ -101,6 +103,18 @@ React Dashboard (static) ──HTTPS──> Express API ──> PostgreSQL
 - [ ] Connect a store, run a sync, view products/orders/customers/dashboard.
 - [ ] Publish a dashboard product to WooCommerce (returns a WooCommerce product id).
 - [ ] Trigger a low-stock automation → notification appears in the bell + notifications page.
+- [ ] **Digital product smoke test (if `DIGITAL_CODE_ENCRYPTION_KEY`/`DIGITAL_CODE_HASH_KEY` are set):**
+  - [ ] Enable digital fulfillment on a synced product.
+  - [ ] Import 3 test codes → summary shows 3 available.
+  - [ ] Create + sync a paid WooCommerce order → codes assigned automatically.
+  - [ ] Reveal a code (requires `digital_inventory.reveal`) → audit log written, cache-control: no-store.
+  - [ ] Generate a customer link → access the public `/digital-order/:token` page → codes visible.
+  - [ ] Verify code previews only (no full code) in the inventory list.
+- [ ] **Customer portal smoke test (if `CUSTOMER_TOKEN_HASH_KEY` is set):**
+  - [ ] Generate a customer link from the order page.
+  - [ ] Open the link → order codes visible, copy button works.
+  - [ ] Attempt to access the link after expiry → rejected with generic message.
+  - [ ] Confirm `Referrer-Policy: no-referrer` header present on the public page.
 - [ ] Confirm no cross-store data leakage with two test stores.
 - [ ] No critical console errors in the browser.
 

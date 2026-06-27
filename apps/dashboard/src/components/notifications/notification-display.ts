@@ -12,6 +12,11 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   failed_automation: "فشل الأتمتة",
   daily_report: "التقرير اليومي",
   whatsapp_order_message: "رسالة واتساب",
+  digital_inventory: "المخزون الرقمي",
+  digital_low_stock: "أكواد منخفضة",
+  digital_out_of_stock: "نفاد الأكواد",
+  digital_delivery_failed: "فشل تسليم الأكواد",
+  digital_replacement_rate: "ارتفاع الاستبدالات",
 };
 
 /** Resolve a raw type string to its Arabic label, tolerating unknown values. */

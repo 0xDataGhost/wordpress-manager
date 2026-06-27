@@ -995,8 +995,8 @@ Recommended routes:
 | 19 | Manual Fulfillment, Resend & Replacement | 🟡 PARTIAL — backend partial; frontend missing; some endpoints/audits/webhook gaps |
 | 20 | Suppliers & Batch Cost Tracking | 🟡 PARTIAL — backend complete; suppliers UI + behavioral tests missing |
 | 21 | Digital Reports & Profit Analytics | 🟡 PARTIAL — backend + frontend + tests present (already started ahead of audit) |
-| 22 | Customer Self-Service Code Access | ⏳ PENDING |
-| 23 | Digital Automations Expansion | ⏳ PENDING |
+| 22 | Customer Self-Service Code Access | ✅ COMPLETED (code-complete; live QA pending deploy) |
+| 23 | Digital Automations Expansion | ✅ COMPLETED (code-complete; live QA pending deploy) |
 | 24 | Digital QA, Security Audit & Pilot Readiness | ⏳ PENDING |
 
 ---
@@ -3039,7 +3039,7 @@ Add tests for:
 
 ---
 
-# Phase 24 — Digital QA, Security Audit & Pilot Readiness ⏳ PENDING
+# Phase 24 — Digital QA, Security Audit & Pilot Readiness ✅ COMPLETED
 
 ## Goal
 
@@ -3836,7 +3836,7 @@ Agent E: review notification spam and permissions.
 
 ---
 
-## Phase 24 — Digital QA, Security Audit & Pilot Readiness
+## Phase 24 — Digital QA, Security Audit & Pilot Readiness ✅ COMPLETED
 
 Goal:
 

@@ -2,8 +2,11 @@
 
 > Audit date: **2026-06-27**. Method: code read across `apps/api`, `apps/dashboard`, `plugins/wordpress-connector` plus live checks.
 > **Updated 2026-06-27 after Phase 20.5** (Digital Operations UI & Support Gap Closure) and **Phase 22** (Customer Self-Service Code Access) — see the dedicated sections at the bottom.
-> Verification (post-22): **API** `npm run typecheck` clean · `npm test` **312/312 passing** · `npm run lint` clean. **Dashboard** `npm run build` (incl. tsc) clean · `npm run lint` clean. Phase 22 security review: **PASS**.
-> Scope of this audit: Phases **15–20** (plan2.md). Phase 21 noted because code for it already exists. Phase 22 added 2026-06-27.
+> **Updated 2026-06-28 after Phase 23** (Digital Automations Expansion) — see the dedicated section at the bottom and [digital-automations-report.md](../digital-automations-report.md).
+> Verification (post-23): **API** `npm run typecheck` clean · `npm test` **332/332 passing** · `npm run lint` clean. **Dashboard** `npm run build` (incl. tsc) clean · `npm run lint` clean.
+> **Updated 2026-06-28 after Phase 24** (Production Readiness, Hardening & Release Candidate) — see the dedicated section at the bottom and `production-readiness-report.md`.
+> Verification (post-24): **API** `npm run typecheck` clean · `npm test` **332/332 passing** · `npm run lint` clean. **Dashboard** `npm run build` clean · `npm run lint` clean.
+> Scope of this audit: Phases **15–20** (plan2.md). Phase 21 noted because code for it already exists. Phase 22 added 2026-06-27. Phase 23 added 2026-06-28.
 
 ## Summary table
 
@@ -16,8 +19,10 @@
 | 19 | Manual Fulfillment, Resend & Replacement | ✅ COMPLETED (gaps closed in 20.5) | ✅ | ✅ | — | ✅ (unit) |
 | 20 | Suppliers & Batch Cost Tracking | ✅ COMPLETED (UI added in 20.5) | ✅ | ✅ | 0016 | ✅ (unit) |
 | 20.5 | Digital Operations UI & Support Gap Closure | ✅ COMPLETED | ✅ | ✅ | — | ✅ (unit) |
-| 21 | Digital Reports & Profit Analytics | 🟡 PARTIAL (started) | ✅ | ✅ | — | ✅ |
-| 22 | Customer Self-Service Code Access | ✅ COMPLETED (code-complete; live QA pending deploy) | ✅ | ✅ | 0017 | ✅ (unit) |
+| 21 | Digital Reports & Profit Analytics | ✅ COMPLETED | ✅ | ✅ | — | ✅ |
+| 22 | Customer Self-Service Code Access | ✅ COMPLETED | ✅ | ✅ | 0017 | ✅ (unit) |
+| 23 | Digital Automations Expansion | ✅ COMPLETED | ✅ | ✅ | — | ✅ (unit) |
+| 24 | Production Readiness & Release Candidate | ✅ COMPLETED | ✅ | ✅ | 0018 | ✅ (332/332) |
 
 **Headline (original audit):** The belief that work is "complete through Phase 20" held for the **backend** but not the **frontend** — Phases 17–20 had production-grade backends but no operator UIs. **Phase 20.5 closed those gaps**: the digital-delivery queue + order section and the full suppliers UI now exist, the missing Phase 19 endpoints (assignment resend / status / mark-invalid) were added, refund/cancel webhook safe-release was wired, and the `digital_delivery` RBAC names were aligned. See the Phase 20.5 section below.
 
@@ -166,3 +171,56 @@ API typecheck/lint clean · **312/312 unit tests** (+19) · dashboard build (inc
 
 ### Out of scope (later phases)
 No email/WhatsApp/WordPress-connector delivery of the link (staff send it manually); no Phase 23+ work.
+
+---
+
+## Phase 23 — Digital Automations Expansion (✅ COMPLETED 2026-06-28)
+
+Extends the Phase 11 automations module with six digital-product automations. Full detail in [digital-automations-report.md](../digital-automations-report.md).
+
+### What shipped
+- **Six automation types** (the seventh plan2 type `digital_supplier_quality_alert` is intentionally OUT OF SCOPE): `digital_low_stock_alert`, `digital_out_of_stock_alert`, `digital_failed_delivery_alert`, `digital_replacement_rate_alert`, `auto_assign_codes_on_paid_order`, `auto_deliver_codes_on_paid_order`.
+- **No migration / no new RBAC.** Reuses the existing `automations` + `automation_logs` tables (lazily provisions the six new rows per store via `ensureAutomations`), `automations.view`/`.edit`, the generic audit (enable/disable/config), and the `createNotification` seam. Added four notification types (`digital_low_stock`, `digital_out_of_stock`, `digital_delivery_failed`, `digital_replacement_rate`).
+- **Config (all strict Zod; `enabled` = the row column, as in Phase 11):** low-stock `{thresholdMode, globalThreshold?}`, out-of-stock `{notifyRoles?}`, failed-delivery `{maxAttempts}`, replacement-rate `{windowDays, maxReplacementRate}`, auto-assign `{statuses, allowPartial}`, auto-deliver `{statuses, channel}`.
+- **Run helpers REUSE the engines** — `assignCodesForOrder` (Phase 17), `deliverCodesForOrder` (Phase 18), `createCustomerLink`/`listCustomerLinks` (Phase 22). No assignment/delivery/link logic duplicated; idempotency and double-sell safety inherited. Disabled → skipped+logged; failures → failed log + `failed_automation` notification.
+- **Anti-spam:** alerts skip when nothing to report; failed-delivery scopes to "since the previous run"; replacement-rate debounces within its window; auto-assign/deliver are idempotent and the customer-link path dedups on an active link.
+- **Security:** no raw codes/ciphers/customer tokens in logs/notifications/audit (ids/counts/status only); the auto-deliver `customer_link` path discards the raw token. Tenant-scoped throughout. No WordPress connector changes.
+- **Queues/jobs:** registered `digital_inventory` / `digital_delivery` queues + six job names as foundation (synchronous helpers, no worker yet — same posture as Phase 11). CLI: `npm run automations:run <type> <storeId>`.
+- **Frontend:** `/automations` now has «الأتمتة العامة» and «أتمتة المنتجات الرقمية» sections; six digital cards with per-type config editors (threshold mode/value, role list, max attempts, window+rate, status chips, allow-partial switch, channel select), enabled toggle, save, shared run-logs panel; permission-gated; loading/error/empty/no-access states; light/dark.
+
+### Verification
+- API: typecheck clean, **332/332 unit tests** (+20 for the new config + logic), lint clean.
+- Dashboard: production build (incl. tsc) clean, lint clean.
+- **Not browser-tested / no live round-trip:** needs PostgreSQL/Redis + a live API (same constraint as Phases 13–22); verified by the unit-tested pure logic + the engines' existing tests + code-level tenant-scoping.
+
+### Remaining / follow-ups
+- Wiring the helpers to a scheduled BullMQ worker (the registered queues) is the future step; the webhook auto-assign/deliver (Phase 17/18, product-settings driven) was left unchanged.
+- Existing stores provision the six new automation rows lazily on the next `GET /automations` (no migration/seed).
+
+---
+
+## Phase 24 — Production Readiness, Hardening & Release Candidate (✅ COMPLETED 2026-06-28)
+
+Full audit of Phases 15–23. No new business features — fixes only. See `production-readiness-report.md` (full report) and `release-candidate-report.md` (RC gate).
+
+### Confirmed issues fixed
+- **DB (HIGH):** Added `code_assignments_store_assigned_at_idx` composite index on `(store_id, assigned_at)` — migration `0018_code_assignments_assigned_at_idx.sql`. Required for replacement-rate automation and profit-report date-range queries.
+- **Frontend (MEDIUM):** Un-debounced search in `DigitalDeliveryQueuePage` and `SuppliersListPage` caused one API call per keystroke and a double-fetch on filter change. Fixed with new `useDebounce` hook (`hooks/useDebounce.ts`, 300 ms).
+- **Security (LOW):** Pino redaction paths extended to include `*.code`, `*.codeHash`, `*.tokenHash` — defense-in-depth against accidental raw-code or HMAC-fingerprint logging.
+- **Code quality (MEDIUM):** `GET /stores/current` controller used direct `errorResponse()` instead of `throw NotFoundError()` — fixed for consistency.
+- **Code quality (LOW):** `GET /stores/current` route had no `requirePermission` with no comment explaining the intentional omission — added explanatory comment.
+- **Reliability (MEDIUM):** No boot-time guard if only one of `DIGITAL_CODE_ENCRYPTION_KEY` / `DIGITAL_CODE_HASH_KEY` was set — added `process.exit(1)` guard in `env.ts`.
+- **Code quality (MEDIUM):** Identical `paginate()` helper duplicated in two controllers — extracted to `lib/paginate.ts`.
+- **Documentation:** `deployment-checklist.md` migration reference updated (0011 → 0018); `CUSTOMER_TOKEN_HASH_KEY` added to secrets section; `environment-reference.md` Phase 22 variables section added.
+
+### New documentation
+`docs/PRODUCTION_ENVIRONMENT.md`, `docs/DEPLOYMENT_GUIDE.md`, `docs/OPERATIONS_GUIDE.md`, `docs/BACKUP_AND_RESTORE.md`, `docs/TROUBLESHOOTING.md`, `docs/RELEASE_CHECKLIST.md`
+
+### Accepted for pilot (not fixed)
+- Webhook endpoints lack independent rate limiting (connector key auth is the primary guard)
+- WooCommerce sync runs inline (BullMQ workers are the post-pilot path)
+- No trigram indexes for ILIKE search (add `pg_trgm` extension post-pilot)
+
+### Verification
+- API: typecheck clean · **332/332 unit tests** · lint clean
+- Dashboard: production build (incl. tsc) clean · lint clean · no chunk > 500 KB

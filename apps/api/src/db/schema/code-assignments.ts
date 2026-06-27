@@ -141,6 +141,11 @@ export const codeAssignments = pgTable(
       table.createdAt,
       table.id,
     ),
+    // Migration 0018: replacement-rate automation and profit-report date-range queries.
+    storeAssignedAtIdx: index("code_assignments_store_assigned_at_idx").on(
+      table.storeId,
+      table.assignedAt,
+    ),
   }),
 );
 

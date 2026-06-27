@@ -21,6 +21,11 @@ export const logger = pino({
       "*.apiKeyCipher",
       "*.apiKeyIv",
       "*.apiKeyTag",
+      // Digital code and customer token HMAC fingerprints — defense-in-depth so
+      // that accidentally logging a DB row never exposes these keyed hashes.
+      "*.codeHash",
+      "*.tokenHash",
+      "*.code",
     ],
     censor: "[REDACTED]",
   },

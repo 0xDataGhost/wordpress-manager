@@ -21,6 +21,11 @@ export const NOTIFICATION_TYPES = [
   "failed_automation",
   "daily_report",
   "digital_inventory",
+  // Phase 23 digital automations.
+  "digital_low_stock",
+  "digital_out_of_stock",
+  "digital_delivery_failed",
+  "digital_replacement_rate",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

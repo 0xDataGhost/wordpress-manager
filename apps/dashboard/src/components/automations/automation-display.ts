@@ -7,7 +7,7 @@ import {
 import type { StatusTone } from "@/components/shared/StatusBadge";
 import type {
   AutomationLogStatus,
-  AutomationType,
+  ClassicAutomationType,
 } from "@/lib/automations-api";
 
 interface AutomationMeta {
@@ -20,8 +20,8 @@ interface AutomationMeta {
   iconClass: string;
 }
 
-/** Per-type display metadata for the three Phase 11 automations. */
-export const AUTOMATION_META: Record<AutomationType, AutomationMeta> = {
+/** Per-type display metadata for the three classic (Phase 11) automations. */
+export const AUTOMATION_META: Record<ClassicAutomationType, AutomationMeta> = {
   low_stock_alert: {
     title: "تنبيه انخفاض المخزون",
     description:
@@ -48,7 +48,7 @@ export const AUTOMATION_META: Record<AutomationType, AutomationMeta> = {
 /** Resolve a raw type string to its metadata, tolerating unknown values. */
 export function resolveAutomationMeta(type: string): AutomationMeta {
   return (
-    AUTOMATION_META[type as AutomationType] ?? {
+    AUTOMATION_META[type as ClassicAutomationType] ?? {
       title: type,
       description: "",
       icon: TrendingUp,

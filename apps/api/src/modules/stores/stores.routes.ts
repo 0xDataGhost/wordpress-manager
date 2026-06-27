@@ -20,7 +20,9 @@ router.post(
   asyncHandler(createStore),
 );
 
-// GET /stores/current   — the store the current token is scoped to
+// GET /stores/current   — the store the current token is scoped to.
+// No requirePermission: every authenticated user needs their own store context
+// regardless of role; this is foundational read-only data, not a privileged action.
 router.get("/current", authenticate, asyncHandler(getCurrentStore));
 
 // POST /stores/current/api-key — issue a new WordPress connector API key

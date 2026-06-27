@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ShieldAlert, Workflow } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { AutomationCard } from "@/components/automations/AutomationCard";
+import { DigitalAutomationCard } from "@/components/automations/DigitalAutomationCard";
+import { isDigitalAutomationType } from "@/components/automations/digital-automation-display";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { listAutomations, type AutomationDto } from "@/lib/automations-api";
 
@@ -43,11 +45,18 @@ export function AutomationsListPage() {
     setItems((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
   }
 
+  const { classic, digital } = useMemo(() => {
+    return {
+      classic: items.filter((a) => !isDigitalAutomationType(a.type)),
+      digital: items.filter((a) => isDigitalAutomationType(a.type)),
+    };
+  }, [items]);
+
   return (
     <div className="animate-fade-in">
       <PageHeader
         title="الأتمتة"
-        description="فعّل الأتمتة الأساسية لمتجرك: تنبيهات المخزون، التقرير اليومي، ورسائل واتساب للطلبات."
+        description="فعّل الأتمتة الأساسية ومنتجاتك الرقمية: تنبيهات المخزون، التقارير، وتعيين وتسليم الأكواد."
       />
 
       {!canView ? (
@@ -67,15 +76,54 @@ export function AutomationsListPage() {
           description="ستظهر هنا الأتمتة المتاحة لمتجرك."
         />
       ) : (
-        <div className="space-y-4">
-          {items.map((automation) => (
-            <AutomationCard
-              key={automation.id}
-              automation={automation}
-              canEdit={canEdit}
-              onChange={handleChange}
-            />
-          ))}
+        <div className="space-y-10">
+          {classic.length > 0 ? (
+            <section aria-labelledby="automations-general-heading">
+              <h2
+                id="automations-general-heading"
+                className="mb-4 text-lg font-semibold"
+              >
+                الأتمتة العامة
+              </h2>
+              <div className="space-y-4">
+                {classic.map((automation) => (
+                  <AutomationCard
+                    key={automation.id}
+                    automation={automation}
+                    canEdit={canEdit}
+                    onChange={handleChange}
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {digital.length > 0 ? (
+            <section aria-labelledby="automations-digital-heading">
+              <div className="mb-4">
+                <h2
+                  id="automations-digital-heading"
+                  className="text-lg font-semibold"
+                >
+                  أتمتة المنتجات الرقمية
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  تنبيهات مخزون الأكواد والتسليم، وتعيين وتسليم الأكواد تلقائياً
+                  للطلبات المدفوعة.
+                </p>
+              </div>
+              <div className="space-y-4">
+                {digital.map((automation) => (
+                  <DigitalAutomationCard
+                    key={automation.id}
+                    automation={automation}
+                    canEdit={canEdit}
+                    onChange={handleChange}
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
         </div>
       )}
     </div>

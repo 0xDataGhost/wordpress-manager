@@ -1,27 +1,20 @@
 import { useState } from "react";
-import { History, Loader2, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { StatusBadge } from "@/components/shared/StatusBadge";
+import { resolveAutomationMeta } from "@/components/automations/automation-display";
+import { AutomationLogsPanel } from "@/components/automations/AutomationLogsPanel";
 import {
-  resolveAutomationMeta,
-  resolveLogStatus,
-} from "@/components/automations/automation-display";
-import {
-  listAutomationLogs,
   updateAutomation,
   type AutomationDto,
-  type AutomationLogDto,
 } from "@/lib/automations-api";
-import { cn, formatDateTime } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 type Banner = { tone: "success" | "error"; message: string };
-
-const LOGS_LIMIT = 5;
 
 /** Reads the single editable config value for an automation type as a string. */
 function readConfigValue(automation: AutomationDto): string {
@@ -80,12 +73,6 @@ export function AutomationCard({
   const [toggling, setToggling] = useState(false);
   const [banner, setBanner] = useState<Banner | null>(null);
 
-  const [logsOpen, setLogsOpen] = useState(false);
-  const [logs, setLogs] = useState<AutomationLogDto[]>([]);
-  const [logsLoading, setLogsLoading] = useState(false);
-  const [logsError, setLogsError] = useState(false);
-  const [logsLoaded, setLogsLoaded] = useState(false);
-
   async function handleToggle(next: boolean) {
     if (!canEdit) return;
     setBanner(null);
@@ -125,30 +112,6 @@ export function AutomationCard({
       });
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function loadLogs() {
-    setLogsLoading(true);
-    setLogsError(false);
-    try {
-      const result = await listAutomationLogs(automation.id, {
-        limit: LOGS_LIMIT,
-      });
-      setLogs(result.items);
-      setLogsLoaded(true);
-    } catch {
-      setLogsError(true);
-    } finally {
-      setLogsLoading(false);
-    }
-  }
-
-  function toggleLogs() {
-    const next = !logsOpen;
-    setLogsOpen(next);
-    if (next && !logsLoaded) {
-      void loadLogs();
     }
   }
 
@@ -217,7 +180,7 @@ export function AutomationCard({
             disabled={!canEdit || saving}
           />
 
-          <div className="mt-3 flex items-center justify-between gap-2">
+          <div className="mt-3 flex items-center gap-2">
             {canEdit ? (
               <Button
                 size="sm"
@@ -232,59 +195,12 @@ export function AutomationCard({
                 العرض فقط — تحتاج صلاحية «تعديل الأتمتة».
               </span>
             )}
+          </div>
 
-            <Button variant="ghost" size="sm" onClick={toggleLogs}>
-              <History className="h-4 w-4" />
-              {logsOpen ? "إخفاء السجلات" : "عرض السجلات"}
-            </Button>
+          <div className="mt-2">
+            <AutomationLogsPanel automationId={automation.id} />
           </div>
         </div>
-
-        {/* Recent run logs */}
-        {logsOpen ? (
-          <div className="mt-4">
-            <h4 className="mb-2 text-sm font-medium text-muted-foreground">
-              آخر السجلات
-            </h4>
-            {logsLoading ? (
-              <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                جارٍ التحميل…
-              </div>
-            ) : logsError ? (
-              <div className="flex items-center justify-between rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                <span>تعذّر تحميل السجلات.</span>
-                <Button variant="outline" size="sm" onClick={() => void loadLogs()}>
-                  إعادة المحاولة
-                </Button>
-              </div>
-            ) : logs.length === 0 ? (
-              <p className="rounded-md border border-dashed bg-muted/30 px-3 py-4 text-center text-sm text-muted-foreground">
-                لا توجد سجلات بعد لهذه الأتمتة.
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {logs.map((log) => {
-                  const status = resolveLogStatus(log.status);
-                  return (
-                    <li
-                      key={log.id}
-                      className="flex flex-col gap-1 rounded-md border bg-card p-3 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div className="flex items-center gap-2">
-                        <StatusBadge label={status.label} tone={status.tone} />
-                        <span className="text-sm">{log.message ?? "—"}</span>
-                      </div>
-                      <time className="text-xs text-muted-foreground">
-                        {formatDateTime(log.createdAt)}
-                      </time>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        ) : null}
       </CardContent>
     </Card>
   );

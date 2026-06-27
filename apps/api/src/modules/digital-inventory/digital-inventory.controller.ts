@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { successResponse } from "../../lib/api-response";
 import { NotFoundError } from "../../lib/errors";
+import { paginate } from "../../lib/paginate";
 import { getAuth } from "../../middleware/authenticate";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "../../db/schema/audit-logs";
 import { recordAuditFromRequest } from "../audit-logs/audit-logs.recorder";
@@ -29,10 +30,6 @@ import type {
   SummaryQuery,
   UpdateCodeStatusInput,
 } from "./digital-inventory.schemas";
-
-function paginate(total: number, page: number, limit: number) {
-  return { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) };
-}
 
 /** GET /digital-inventory/summary — status counts + low-stock (digital_inventory.view). */
 export async function getSummaryHandler(

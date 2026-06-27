@@ -14,11 +14,23 @@
 
 import { apiRequest } from "./http";
 
-/** The three Phase 11 automations. */
-export type AutomationType =
+/** The Phase 11 (classic) automations. */
+export type ClassicAutomationType =
   | "low_stock_alert"
   | "daily_sales_report"
   | "whatsapp_order_message";
+
+/** The Phase 23 digital-product automations. */
+export type DigitalAutomationType =
+  | "digital_low_stock_alert"
+  | "digital_out_of_stock_alert"
+  | "digital_failed_delivery_alert"
+  | "digital_replacement_rate_alert"
+  | "auto_assign_codes_on_paid_order"
+  | "auto_deliver_codes_on_paid_order";
+
+/** Every automation type surfaced on the /automations page. */
+export type AutomationType = ClassicAutomationType | DigitalAutomationType;
 
 /** Outcome of an automation run. */
 export type AutomationLogStatus = "success" | "skipped" | "queued" | "failed";

@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { db } from "../../db";
-import { errorResponse, successResponse } from "../../lib/api-response";
+import { successResponse } from "../../lib/api-response";
+import { NotFoundError } from "../../lib/errors";
 import { getAuth } from "../../middleware/authenticate";
 import { createStoreWithOwner, getStoreById } from "./stores.service";
 import { toStoreDto } from "./stores.serializer";
@@ -27,8 +28,7 @@ export async function getCurrentStore(
   const store = await getStoreById(storeId);
 
   if (!store) {
-    res.status(404).json(errorResponse("NOT_FOUND", "Current store not found"));
-    return;
+    throw new NotFoundError("Current store not found");
   }
 
   res.status(200).json(successResponse(toStoreDto(store), ""));

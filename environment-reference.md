@@ -99,6 +99,26 @@ Digital codes are encrypted at rest (AES-256-GCM) and de-duplicated via a keyed 
 
 \* Functionally required (both) to use digital fulfillment; the API still boots without them.
 
+### Customer self-service portal (Phase 22)
+
+Customers view their delivered codes through a short-lived signed link. All tokens are stored as HMAC fingerprints — the raw token is shown once and never stored.
+
+| Variable | Req | Default | Bounds / Notes |
+|---|---|---|---|
+| `CUSTOMER_TOKEN_HASH_KEY` | Optional* | — | Dedicated HMAC secret for customer token fingerprints. **MUST NOT reuse `DIGITAL_CODE_HASH_KEY`.** Only non-emptiness enforced; use a strong random value (`npm run secrets:generate`). Unset → customer link generation returns "not configured". |
+| `CUSTOMER_LINK_DEFAULT_TTL_DAYS` | Optional | `7` | int 1–365 — default link lifetime |
+| `CUSTOMER_LINK_MAX_TTL_DAYS` | Optional | `30` | int 1–365 — hard max; requests can never exceed this |
+| `CUSTOMER_LINK_DEFAULT_MAX_USES` | Optional | `1` | int 1–10000 — default max code reveals per link (1 = single-use) |
+| `PUBLIC_APP_URL` | Optional | — | Full URL used to compose the customer link (e.g. `https://dashboard.example.com`). When unset, the dashboard uses its own origin. |
+| `CUSTOMER_ACCESS_LOOKUP_RATE_LIMIT_ENABLED` | Optional | `true` | `true` \| `false` |
+| `CUSTOMER_ACCESS_LOOKUP_RATE_LIMIT_WINDOW_SECONDS` | Optional | `60` | positive int |
+| `CUSTOMER_ACCESS_LOOKUP_RATE_LIMIT_MAX` | Optional | `30` | positive int — lookup requests per window before 429 |
+| `CUSTOMER_ACCESS_REVEAL_RATE_LIMIT_ENABLED` | Optional | `true` | `true` \| `false` — applies both per-IP and per-token |
+| `CUSTOMER_ACCESS_REVEAL_RATE_LIMIT_WINDOW_SECONDS` | Optional | `60` | positive int |
+| `CUSTOMER_ACCESS_REVEAL_RATE_LIMIT_MAX` | Optional | `10` | positive int — reveals per window (per-IP and per-token, independent buckets) |
+
+\* Functionally required to use the customer self-service portal; the API still boots without it.
+
 ### Graceful shutdown
 
 | Variable | Req | Default | Bounds / Notes |
@@ -135,7 +155,8 @@ JWT_ACCESS_SECRET=<64-hex>
 JWT_REFRESH_SECRET=<64-hex>
 CONNECTOR_ENCRYPTION_KEY=<64-hex>         # required for publish/sync
 DIGITAL_CODE_ENCRYPTION_KEY=<64-hex>      # required for digital code import/reveal
-DIGITAL_CODE_HASH_KEY=<strong-random>    # required for digital code import/reveal
+DIGITAL_CODE_HASH_KEY=<strong-random>     # required for digital code import/reveal
+CUSTOMER_TOKEN_HASH_KEY=<strong-random>   # required for customer self-service portal
 # Dashboard build:
 VITE_API_URL=https://api.example.com
 ```
