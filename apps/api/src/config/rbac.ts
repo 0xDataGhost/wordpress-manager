@@ -79,6 +79,10 @@ export const PERMISSIONS = [
     description: "Refund or cancel a digital code assignment (money-sensitive)",
   },
   {
+    key: "digital_delivery.customer_link",
+    description: "Generate and revoke customer self-service code links",
+  },
+  {
     key: "digital_suppliers.view",
     description: "View suppliers and their batches/metrics",
   },
@@ -159,6 +163,7 @@ export const SYSTEM_ROLES: SystemRoleDefinition[] = [
       "digital_delivery.resend",
       "digital_delivery.replace",
       "digital_delivery.refund",
+      "digital_delivery.customer_link",
       "digital_suppliers.view",
       "digital_suppliers.create",
       "digital_suppliers.edit",
@@ -203,6 +208,7 @@ export const SYSTEM_ROLES: SystemRoleDefinition[] = [
       "digital_delivery.retry",
       "digital_delivery.resend",
       "digital_delivery.replace",
+      "digital_delivery.customer_link",
     ],
   },
   {
@@ -219,6 +225,7 @@ export const SYSTEM_ROLES: SystemRoleDefinition[] = [
       "digital_delivery.retry",
       "digital_delivery.resend",
       "digital_delivery.replace",
+      "digital_delivery.customer_link",
     ],
   },
   {

@@ -1,9 +1,9 @@
 # Digital Expansion — Phase Status (Audited)
 
 > Audit date: **2026-06-27**. Method: code read across `apps/api`, `apps/dashboard`, `plugins/wordpress-connector` plus live checks.
-> **Updated 2026-06-27 after Phase 20.5** (Digital Operations UI & Support Gap Closure) — see the dedicated section at the bottom.
-> Verification (post-20.5): **API** `npm run typecheck` clean · `npm test` **293/293 passing** · `npm run lint` clean. **Dashboard** `npm run build` clean · `npm run lint` clean.
-> Scope of this audit: Phases **15–20** (plan2.md). Phase 21 noted because code for it already exists.
+> **Updated 2026-06-27 after Phase 20.5** (Digital Operations UI & Support Gap Closure) and **Phase 22** (Customer Self-Service Code Access) — see the dedicated sections at the bottom.
+> Verification (post-22): **API** `npm run typecheck` clean · `npm test` **312/312 passing** · `npm run lint` clean. **Dashboard** `npm run build` (incl. tsc) clean · `npm run lint` clean. Phase 22 security review: **PASS**.
+> Scope of this audit: Phases **15–20** (plan2.md). Phase 21 noted because code for it already exists. Phase 22 added 2026-06-27.
 
 ## Summary table
 
@@ -17,6 +17,7 @@
 | 20 | Suppliers & Batch Cost Tracking | ✅ COMPLETED (UI added in 20.5) | ✅ | ✅ | 0016 | ✅ (unit) |
 | 20.5 | Digital Operations UI & Support Gap Closure | ✅ COMPLETED | ✅ | ✅ | — | ✅ (unit) |
 | 21 | Digital Reports & Profit Analytics | 🟡 PARTIAL (started) | ✅ | ✅ | — | ✅ |
+| 22 | Customer Self-Service Code Access | ✅ COMPLETED (code-complete; live QA pending deploy) | ✅ | ✅ | 0017 | ✅ (unit) |
 
 **Headline (original audit):** The belief that work is "complete through Phase 20" held for the **backend** but not the **frontend** — Phases 17–20 had production-grade backends but no operator UIs. **Phase 20.5 closed those gaps**: the digital-delivery queue + order section and the full suppliers UI now exist, the missing Phase 19 endpoints (assignment resend / status / mark-invalid) were added, refund/cancel webhook safe-release was wired, and the `digital_delivery` RBAC names were aligned. See the Phase 20.5 section below.
 
@@ -137,3 +138,31 @@ A remediation phase (not in the original plan) that closes the 17–20 frontend 
 - New `digital_delivery.*` permissions require a `db:seed` run to materialize in an existing database before the new endpoints/nav are usable.
 - The minor Phase 15 gap (digital badge on the product **list** page) remains out of scope for 20.5.
 - No live WooCommerce/DB round-trip was exercised (no environment).
+
+---
+
+## Phase 22 — Customer Self-Service Code Access (✅ COMPLETED 2026-06-27)
+
+Secure customer portal: staff generate a signed, expiring link; customers view their delivered codes with no login. No codes in WordPress; every view recorded. Full detail in [digital-customer-access-report.md](../digital-customer-access-report.md) and security audit in [digital-customer-security-review.md](../digital-customer-security-review.md).
+
+### What shipped
+- **DB (migration `0017_customer_self_service`):** `customer_access_tokens` (HMAC-hash only, expiry, max_uses, used_count, revoked_at; unique token_hash) and `customer_code_views` (per-view access log: viewed/copied + ip/ua).
+- **Token model:** 256-bit random token → keyed HMAC-SHA256 at rest under a **dedicated** `CUSTOMER_TOKEN_HASH_KEY`. Default expiry 7d (max 30); default `max_uses = 1` (single-use; unlimited opt-in). One active token per order (new link revokes prior, advisory-lock serialized).
+- **Staff endpoints (JWT, `digital_delivery.customer_link` / `.view`):** `POST /digital-delivery/orders/:orderId/customer-link`, `GET …/customer-links`, `POST /digital-delivery/customer-links/:id/revoke`.
+- **Public endpoints (NO JWT, token in body, rate-limited, no-store):** `POST /public/digital-orders/lookup` (masked previews), `POST /public/digital-orders/reveal` (`viewed` → one full code, consumes a use, records view; `copied` → log only).
+- **Frontend:** public `/digital-order/:token` page (Arabic RTL, no layout/auth, per-code show/copy/hide) + `CustomerLinkDialog` in `OrderDigitalSection` (generate/copy/revoke).
+- **Audit:** `digital_customer_link_created` / `digital_customer_link_revoked` (never the token); customer views in `customer_code_views`.
+- **Hardening:** token only in body (never URL); `request-logger` redacts auth/cookie headers; `Referrer-Policy: no-referrer` (index.html); per-IP + per-token rate limits; generic uniform rejection; atomic max-use enforcement; tenant+order-scoped queries.
+
+### Security review
+PASS. Two WEAK findings raised and **fixed**: (1) Referer/history leakage → parse-time `no-referrer` meta + page-level policy; (2) one-active-token race → transaction advisory lock.
+
+### Verification
+API typecheck/lint clean · **312/312 unit tests** (+19) · dashboard build (incl. tsc)/lint clean · security review PASS.
+
+### Not done here (requires a deployed stack)
+- Live manual QA (10 scenarios) needs PostgreSQL/Redis + migrations through `0017` + `CUSTOMER_TOKEN_HASH_KEY` + `npm run db:seed` (to materialize the new permission). Verified structurally (code trace + unit tests + security audit) here, consistent with prior phases.
+- Deployment notes: also set a `Referrer-Policy: no-referrer` response header at the host/CDN; HTTPS only.
+
+### Out of scope (later phases)
+No email/WhatsApp/WordPress-connector delivery of the link (staff send it manually); no Phase 23+ work.

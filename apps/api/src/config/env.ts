@@ -128,6 +128,53 @@ const envSchema = z.object({
     .int()
     .positive()
     .default(20),
+  // Customer self-service portal (Phase 22). Dedicated HMAC secret used by
+  // lib/customer-token to fingerprint access tokens at rest — MUST NOT reuse
+  // DIGITAL_CODE_HASH_KEY. Optional so the API still boots without the portal;
+  // generating/validating a customer link requires it (else a clear "not
+  // configured" error). Used verbatim as the HMAC secret, so only non-emptiness
+  // is enforced (use a strong random value — see `npm run secrets:generate`).
+  CUSTOMER_TOKEN_HASH_KEY: optionalSecret,
+  // Link lifetime: default and hard maximum (days). A create request may shorten
+  // but never exceed the maximum.
+  CUSTOMER_LINK_DEFAULT_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(7),
+  CUSTOMER_LINK_MAX_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+  // Default max code reveals per link (null/unlimited is opt-in per link). 1 = a
+  // single-use link, the safe default for the common single-code order.
+  CUSTOMER_LINK_DEFAULT_MAX_USES: z.coerce.number().int().min(1).max(10_000).default(1),
+  // Optional public base URL used to compose the customer link. When unset, the
+  // API returns the raw token and the dashboard composes the link from its origin.
+  PUBLIC_APP_URL: z.preprocess(emptyToUndefined, z.string().url().optional()),
+  // Per-IP rate limit for the PUBLIC lookup endpoint (moderate). Own bucket.
+  CUSTOMER_ACCESS_LOOKUP_RATE_LIMIT_ENABLED: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
+  CUSTOMER_ACCESS_LOOKUP_RATE_LIMIT_WINDOW_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(60),
+  CUSTOMER_ACCESS_LOOKUP_RATE_LIMIT_MAX: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(30),
+  // Per-IP + per-token rate limit for the PUBLIC reveal endpoint (strict).
+  CUSTOMER_ACCESS_REVEAL_RATE_LIMIT_ENABLED: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
+  CUSTOMER_ACCESS_REVEAL_RATE_LIMIT_WINDOW_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(60),
+  CUSTOMER_ACCESS_REVEAL_RATE_LIMIT_MAX: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(10),
 });
 
 const parsed = envSchema.safeParse(process.env);

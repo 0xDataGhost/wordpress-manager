@@ -36,3 +36,5 @@ export * from "./digital-codes";
 export * from "./code-assignments";
 export * from "./digital-deliveries";
 export * from "./delivery-attempts";
+export * from "./customer-access-tokens";
+export * from "./customer-code-views";

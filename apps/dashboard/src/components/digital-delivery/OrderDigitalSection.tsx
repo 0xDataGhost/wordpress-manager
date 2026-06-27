@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Eye,
   KeyRound,
+  Link2,
   MoreHorizontal,
   PackageCheck,
   RefreshCw,
@@ -34,6 +35,7 @@ import { ManualAssignDialog, type ManualAssignItem } from "./ManualAssignDialog"
 import { AssignmentStatusDialog } from "./AssignmentStatusDialog";
 import { MarkInvalidDialog } from "./MarkInvalidDialog";
 import { ReleaseDialog } from "./ReleaseDialog";
+import { CustomerLinkDialog } from "./CustomerLinkDialog";
 import {
   ASSIGNMENT_TYPE_LABELS,
   DELIVERY_CHANNEL_LABELS,
@@ -86,6 +88,7 @@ export function OrderDigitalSection({
   const canReveal = hasPermission("digital_inventory.reveal");
   const canMarkInvalid = hasPermission("digital_inventory.edit");
   const canPickCode = hasPermission("digital_inventory.view");
+  const canCustomerLink = hasPermission("digital_delivery.customer_link");
 
   const [view, setView] = useState<OrderAssignmentsView | null>(null);
   const [deliveries, setDeliveries] = useState<OrderDeliveriesView | null>(null);
@@ -106,6 +109,7 @@ export function OrderDigitalSection({
   } | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
   const [releaseOpen, setReleaseOpen] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -452,6 +456,12 @@ export function OrderDigitalSection({
               تحرير الأكواد
             </Button>
           ) : null}
+          {canCustomerLink && view.assignedCodes > 0 ? (
+            <Button variant="outline" onClick={() => setLinkOpen(true)}>
+              <Link2 className="h-4 w-4" />
+              رابط العميل
+            </Button>
+          ) : null}
         </div>
 
         <div>
@@ -517,6 +527,11 @@ export function OrderDigitalSection({
         orderId={orderId}
         onOpenChange={setReleaseOpen}
         onDone={() => void load()}
+      />
+      <CustomerLinkDialog
+        open={linkOpen}
+        orderId={orderId}
+        onOpenChange={setLinkOpen}
       />
     </Card>
   );

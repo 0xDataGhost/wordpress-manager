@@ -120,6 +120,13 @@
       "when": 1782414844217,
       "tag": "0016_worthless_lockjaw",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1782540535760,
+      "tag": "0017_customer_self_service",
+      "breakpoints": true
     }
   ]
 }

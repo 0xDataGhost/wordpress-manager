@@ -316,3 +316,62 @@ export async function releaseOrder(
     body,
   });
 }
+
+/* ----------------- Phase 22: customer self-service links ----------------- */
+
+export type CustomerLinkStatus = "active" | "revoked" | "expired" | "exhausted";
+
+export interface CustomerLink {
+  id: string;
+  expiresAt: string;
+  /** null = unlimited reveals within the expiry window. */
+  maxUses: number | null;
+  usedCount: number;
+  revokedAt: string | null;
+  createdAt: string;
+  status: CustomerLinkStatus;
+}
+
+export interface CreatedCustomerLink {
+  id: string;
+  /** The raw token — returned ONCE; compose/copy the link immediately. */
+  token: string;
+  /** Full link when PUBLIC_APP_URL is configured server-side, else null. */
+  url: string | null;
+  expiresAt: string;
+  maxUses: number | null;
+}
+
+export interface CreateCustomerLinkInput {
+  expiresInDays?: number;
+  /** null = unlimited; omitted = server default (single-use). */
+  maxUses?: number | null;
+}
+
+export async function createCustomerLink(
+  orderId: string,
+  body: CreateCustomerLinkInput = {},
+): Promise<CreatedCustomerLink> {
+  return apiRequest<CreatedCustomerLink>(
+    `/digital-delivery/orders/${orderId}/customer-link`,
+    { method: "POST", body },
+  );
+}
+
+export async function listCustomerLinks(
+  orderId: string,
+): Promise<{ items: CustomerLink[] }> {
+  return apiRequest<{ items: CustomerLink[] }>(
+    `/digital-delivery/orders/${orderId}/customer-links`,
+    { method: "GET" },
+  );
+}
+
+export async function revokeCustomerLink(
+  id: string,
+): Promise<{ id: string }> {
+  return apiRequest<{ id: string }>(
+    `/digital-delivery/customer-links/${id}/revoke`,
+    { method: "POST" },
+  );
+}

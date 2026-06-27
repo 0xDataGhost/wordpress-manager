@@ -34,6 +34,15 @@ import {
   updateAssignmentStatusHandler,
 } from "./manual.controller";
 import {
+  createCustomerLinkHandler,
+  listCustomerLinksHandler,
+  revokeCustomerLinkHandler,
+} from "./customer-link.controller";
+import {
+  createCustomerLinkSchema,
+  customerLinkParamsSchema,
+} from "./customer-link.schemas";
+import {
   assignmentParamsSchema,
   assignmentStatusSchema,
   manualAssignSchema,
@@ -174,6 +183,35 @@ router.post(
   requirePermission("digital_delivery.refund"),
   validate({ params: orderParamsSchema, body: releaseSchema }),
   asyncHandler(releaseHandler),
+);
+
+/* ------------------- Phase 22: customer self-service links ------------------- */
+
+// POST /digital-delivery/orders/:orderId/customer-link — generate a signed link
+router.post(
+  "/orders/:orderId/customer-link",
+  authenticate,
+  requirePermission("digital_delivery.customer_link"),
+  validate({ params: orderParamsSchema, body: createCustomerLinkSchema }),
+  asyncHandler(createCustomerLinkHandler),
+);
+
+// GET /digital-delivery/orders/:orderId/customer-links — list links (no token)
+router.get(
+  "/orders/:orderId/customer-links",
+  authenticate,
+  view,
+  validate({ params: orderParamsSchema }),
+  asyncHandler(listCustomerLinksHandler),
+);
+
+// POST /digital-delivery/customer-links/:id/revoke — revoke a link
+router.post(
+  "/customer-links/:id/revoke",
+  authenticate,
+  requirePermission("digital_delivery.customer_link"),
+  validate({ params: customerLinkParamsSchema }),
+  asyncHandler(revokeCustomerLinkHandler),
 );
 
 export default router;

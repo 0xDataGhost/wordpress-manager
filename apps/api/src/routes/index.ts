@@ -20,6 +20,7 @@ import digitalInventoryRoutes from "../modules/digital-inventory/digital-invento
 import digitalDeliveryRoutes from "../modules/digital-delivery/digital-delivery.routes";
 import supplierRoutes from "../modules/suppliers/suppliers.routes";
 import digitalReportRoutes from "../modules/digital-reports/digital-reports.routes";
+import customerAccessRoutes from "../modules/customer-access/customer-access.routes";
 
 /**
  * Root API router, mounted under env.API_PREFIX (default /api/v1).
@@ -57,6 +58,10 @@ router.use("/digital-inventory", digitalInventoryRoutes);
 router.use("/digital-delivery", digitalDeliveryRoutes);
 router.use("/suppliers", supplierRoutes);
 router.use("/digital-reports", digitalReportRoutes);
+// Phase 22: PUBLIC customer self-service portal. NO JWT — these routes are gated
+// by a valid signed token in the body and are rate-limited. Mounted under /public
+// so the no-auth surface is clearly isolated.
+router.use("/public", customerAccessRoutes);
 router.use("/wp", wpRoutes);
 
 export default router;

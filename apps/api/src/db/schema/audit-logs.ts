@@ -47,6 +47,8 @@ export const AUDIT_ACTIONS = {
   DIGITAL_ASSIGNMENT_REFUNDED: "digital_assignment_refunded",
   DIGITAL_ASSIGNMENT_CANCELLED: "digital_assignment_cancelled",
   DIGITAL_ORDER_STATUS_CHANGED: "digital_order_digital_status_changed",
+  DIGITAL_CUSTOMER_LINK_CREATED: "digital_customer_link_created",
+  DIGITAL_CUSTOMER_LINK_REVOKED: "digital_customer_link_revoked",
   SUPPLIER_CREATED: "supplier_created",
   SUPPLIER_UPDATED: "supplier_updated",
   SUPPLIER_ARCHIVED: "supplier_archived",

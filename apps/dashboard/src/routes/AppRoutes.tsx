@@ -138,6 +138,11 @@ const TeamPage = lazy(() =>
     default: m.TeamPage,
   })),
 );
+const DigitalOrderPage = lazy(() =>
+  import("@/pages/public/DigitalOrderPage").then((m) => ({
+    default: m.DigitalOrderPage,
+  })),
+);
 const NotFoundPage = lazy(() =>
   import("@/pages/NotFoundPage").then((m) => ({ default: m.NotFoundPage })),
 );
@@ -198,6 +203,9 @@ export function AppRoutes() {
             <Route path="/digital-reports" element={<DigitalReportsPage />} />
           </Route>
         </Route>
+
+        {/* Public customer self-service portal (Phase 22) — no auth, no layout. */}
+        <Route path="/digital-order/:token" element={<DigitalOrderPage />} />
 
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<NotFoundPage />} />

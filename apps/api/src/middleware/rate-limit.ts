@@ -30,6 +30,14 @@ interface RateLimitOptions {
    * reveal endpoint) pass their own flag so they are not coupled to the auth one.
    */
   enabled?: boolean;
+  /**
+   * Derives the per-client key from the request. Defaults to the client IP.
+   * Used to throttle by a non-IP dimension (e.g. a token fingerprint) so a single
+   * leaked link can be limited across IPs. MUST return a non-secret value — never
+   * a raw token (the value lands in a Redis key). Returns null/empty to fall back
+   * to the IP, so a request missing the keyed value is still IP-limited.
+   */
+  keyBy?: (req: Parameters<RequestHandler>[0]) => string | null | undefined;
 }
 
 /**
@@ -48,7 +56,8 @@ export function rateLimit(options: RateLimitOptions): RequestHandler {
       return;
     }
 
-    const clientId = req.ip ?? "unknown";
+    const clientId =
+      (options.keyBy ? options.keyBy(req) : null) || req.ip || "unknown";
     const key = `ratelimit:${options.name}:${clientId}`;
 
     redis
