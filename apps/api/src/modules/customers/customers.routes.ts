@@ -7,11 +7,13 @@ import {
   getCustomerHandler,
   listCustomersHandler,
   updateCustomerNotesHandler,
+  updateCustomerWpHandler,
 } from "./customers.controller";
 import {
   customerParamsSchema,
   listCustomersQuerySchema,
   updateCustomerNotesSchema,
+  updateCustomerWpSchema,
 } from "./customers.schemas";
 
 const router = Router();
@@ -41,6 +43,15 @@ router.patch(
   requirePermission("customers.edit"),
   validate({ params: customerParamsSchema, body: updateCustomerNotesSchema }),
   asyncHandler(updateCustomerNotesHandler),
+);
+
+// PUT /customers/:id — write name/phone/billing/shipping back to WooCommerce.
+router.put(
+  "/:id",
+  authenticate,
+  requirePermission("customers.manage"),
+  validate({ params: customerParamsSchema, body: updateCustomerWpSchema }),
+  asyncHandler(updateCustomerWpHandler),
 );
 
 export default router;

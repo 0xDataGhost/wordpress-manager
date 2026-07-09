@@ -46,6 +46,11 @@ export const webhookEvents = pgTable(
     status: text("status").notNull().default("received"),
     payload: jsonb("payload"),
     error: text("error"),
+    // Set when this event is the echo of a wp_commands row this SaaS issued
+    // (the connector round-trips X-Saas-Command-Id onto the webhooks the
+    // mutation fires). Echoed events confirm their command and are NOT
+    // re-processed as external changes (Phase 25 echo suppression).
+    originCommandId: uuid("origin_command_id"),
     receivedAt: timestamp("received_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

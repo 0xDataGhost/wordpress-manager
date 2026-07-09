@@ -8,7 +8,7 @@ import {
 import { NotFoundError, ServiceUnavailableError } from "../../lib/errors";
 import { escapeLike } from "../../lib/sql";
 import { getConnectionByStoreId } from "../connections/connections.service";
-import { wpRequest } from "../connections/wp-client";
+import { runWpCommandOrThrow } from "../wp-commands/wp-commands.service";
 import { upsertMapping } from "../sync/external-mappings.service";
 import { toWooPayload, type WooProductPayload } from "./products.serializer";
 import type {
@@ -184,6 +184,7 @@ function extractWpProductId(data: unknown): number | null {
 export async function publishProductToWp(
   storeId: string,
   id: string,
+  userId: string | null = null,
 ): Promise<PublishResult> {
   const product = await getProductById(storeId, id);
   if (!product) {
@@ -199,22 +200,21 @@ export async function publishProductToWp(
 
   const wooPayload = toWooPayload(product);
 
-  // PUT to update an already-linked product, POST to create a new one.
+  // Phase 25: publish flows through the command outbox — recorded before the
+  // attempt, idempotent at the connector, echo-suppressed on the webhook side.
+  // Update when already linked, create otherwise.
   const isUpdate = product.wpProductId !== null;
-  const result = await wpRequest(
-    connection,
-    isUpdate ? "PUT" : "POST",
-    isUpdate ? `products/${product.wpProductId}` : "products",
-    wooPayload,
-  );
+  const command = await runWpCommandOrThrow({
+    storeId,
+    domain: "product",
+    action: isUpdate ? "update" : "create",
+    targetWpId: product.wpProductId,
+    payload: wooPayload,
+    createdBy: userId,
+  });
 
-  if (!result.ok) {
-    throw new ServiceUnavailableError(
-      `Failed to publish to WooCommerce: ${result.message}`,
-    );
-  }
-
-  const wpProductId = extractWpProductId(result.data) ?? product.wpProductId;
+  const wpProductId =
+    extractWpProductId(command.result) ?? product.wpProductId;
   if (!wpProductId) {
     throw new ServiceUnavailableError(
       "WooCommerce did not return a product id for the published product.",
@@ -255,6 +255,7 @@ export async function applyProductUpsert(
   storeId: string,
   item: ConnectorProductInput,
   now: Date = new Date(),
+  wpVersion: string | null = null,
 ): Promise<ProductUpsertOutcome> {
   const [existing] = await tx
     .select({ id: products.id })
@@ -276,6 +277,9 @@ export async function applyProductUpsert(
     status: item.status,
     imageUrl: item.imageUrl ?? null,
     lastSyncedAt: now,
+    // Compare-and-set token; older connectors do not report one — keep the
+    // last-known value rather than clearing it.
+    ...(wpVersion ? { wpVersion } : {}),
   };
 
   let id: string;

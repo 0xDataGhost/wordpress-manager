@@ -66,6 +66,12 @@ export const wooImageSchema = z.object({
   alt: z.string().trim().max(500).nullish(),
 });
 
+/**
+ * Entity version token (unix timestamp of date_modified as a string). Stored
+ * verbatim and echoed back as the compare-and-set token on write-back commands.
+ */
+const versionField = z.string().trim().max(64).nullish();
+
 /** A WooCommerce product pulled from the connector. */
 export const wooProductSchema = z.object({
   wpProductId: wpIdField,
@@ -77,6 +83,7 @@ export const wooProductSchema = z.object({
   // Raw WooCommerce status (publish/draft/pending/private); mapped on our side.
   status: z.string().trim().max(20).default("publish"),
   images: z.array(wooImageSchema).max(50).default([]),
+  dateModified: versionField,
 });
 
 /** A WooCommerce customer pulled from the connector. */
@@ -100,6 +107,45 @@ export const wooLineItemSchema = z.object({
   total: moneyField.default("0"),
 });
 
+/** A WooCommerce coupon pulled from the connector (Phase 28/31). */
+export const wooCouponSchema = z.object({
+  wpCouponId: wpIdField,
+  code: z.string().trim().min(1).max(100),
+  discountType: z.string().trim().max(40).default("fixed_cart"),
+  amount: moneyField.default("0"),
+  description: z.string().trim().max(5000).nullish(),
+  freeShipping: z.coerce.boolean().default(false),
+  usageCount: intField.default(0),
+  usageLimit: optionalWpId,
+  usageLimitPerUser: optionalWpId,
+  dateExpires: z.string().trim().max(40).nullish(),
+  restrictions: z.record(z.string(), z.unknown()).nullish(),
+  dateModified: versionField,
+});
+
+/** A WooCommerce product review pulled from the connector (Phase 29/31). */
+export const wooReviewSchema = z.object({
+  wpReviewId: wpIdField,
+  wpProductId: optionalWpId,
+  productName: z.string().trim().max(300).nullish(),
+  author: z.string().trim().max(200).nullish(),
+  authorEmail: z.string().trim().max(320).nullish(),
+  rating: intField.default(0),
+  content: z.string().trim().max(5000).nullish(),
+  status: z.string().trim().max(20).default("hold"),
+  dateCreated: z.string().trim().max(40).nullish(),
+  dateModified: versionField,
+});
+
+/** A WooCommerce order refund summary (Phase 27). */
+export const wooRefundSchema = z.object({
+  wpRefundId: wpIdField,
+  amount: moneyField.default("0"),
+  reason: z.string().trim().max(500).nullish(),
+  refundedPayment: z.coerce.boolean().default(false),
+  dateCreated: isoDateField,
+});
+
 /** A WooCommerce order pulled from the connector. */
 export const wooOrderSchema = z.object({
   wpOrderId: wpIdField,
@@ -112,6 +158,11 @@ export const wooOrderSchema = z.object({
   wpCustomerId: optionalWpId,
   placedAt: isoDateField,
   lineItems: z.array(wooLineItemSchema).max(500).default([]),
+  // Phase 27: refund mirror + compare-and-set token. Older connectors omit
+  // these; the defaults keep the shared upsert path backward compatible.
+  totalRefunded: moneyField.default("0"),
+  refunds: z.array(wooRefundSchema).max(200).default([]),
+  dateModified: versionField,
 });
 
 /** The connector returns `{ items: [...], page, totalPages }` for each entity. */
@@ -127,6 +178,9 @@ export type WooProduct = z.infer<typeof wooProductSchema>;
 export type WooCustomer = z.infer<typeof wooCustomerSchema>;
 export type WooOrder = z.infer<typeof wooOrderSchema>;
 export type WooLineItem = z.infer<typeof wooLineItemSchema>;
+export type WooRefund = z.infer<typeof wooRefundSchema>;
+export type WooCouponPayload = z.infer<typeof wooCouponSchema>;
+export type WooReviewPayload = z.infer<typeof wooReviewSchema>;
 
 /** Body for POST /wp/sync — the connector asks the SaaS to run a manual sync. */
 export const wpSyncTriggerSchema = z.object({

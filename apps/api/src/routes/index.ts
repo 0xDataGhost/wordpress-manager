@@ -21,6 +21,12 @@ import digitalDeliveryRoutes from "../modules/digital-delivery/digital-delivery.
 import supplierRoutes from "../modules/suppliers/suppliers.routes";
 import digitalReportRoutes from "../modules/digital-reports/digital-reports.routes";
 import customerAccessRoutes from "../modules/customer-access/customer-access.routes";
+import wpCommandRoutes from "../modules/wp-commands/wp-commands.routes";
+import catalogRoutes from "../modules/catalog/catalog.routes";
+import couponRoutes from "../modules/coupons/coupons.routes";
+import reviewRoutes from "../modules/reviews/reviews.routes";
+import storeConfigRoutes from "../modules/store-config/store-config.routes";
+import reconciliationRoutes from "../modules/reconciliation/reconciliation.routes";
 
 /**
  * Root API router, mounted under env.API_PREFIX (default /api/v1).
@@ -63,5 +69,17 @@ router.use("/digital-reports", digitalReportRoutes);
 // so the no-auth surface is clearly isolated.
 router.use("/public", customerAccessRoutes);
 router.use("/wp", wpRoutes);
+// Phase 25: the WordPress command outbox (Command Center).
+router.use("/wp-commands", wpCommandRoutes);
+// Phase 26: catalog control (taxonomies, variations, media, bulk, delete).
+router.use("/catalog", catalogRoutes);
+// Phase 28: coupons.
+router.use("/coupons", couponRoutes);
+// Phase 29: product review moderation.
+router.use("/reviews", reviewRoutes);
+// Phase 30: store configuration (settings, shipping, taxes, gateways).
+router.use("/store-config", storeConfigRoutes);
+// Phase 31: parity reconciliation (drift detection + self-heal).
+router.use("/reconciliation", reconciliationRoutes);
 
 export default router;

@@ -87,6 +87,13 @@ class Saas_Connector_Products {
 			);
 		}
 
+		// Phase 25 compare-and-set: reject the update with 409 when WordPress
+		// has a newer version than the one the SaaS is editing.
+		$version_check = Saas_Connector_Versioning::check( $request, $product->get_date_modified() );
+		if ( is_wp_error( $version_check ) ) {
+			return $version_check;
+		}
+
 		$name = $request->get_param( 'name' );
 		if ( null !== $name ) {
 			$clean = sanitize_text_field( (string) $name );

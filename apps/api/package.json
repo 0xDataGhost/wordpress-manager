@@ -1,7 +1,7 @@
 {
   "name": "@saas/api",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Express API foundation for the SaaS E-commerce Operations Dashboard",
   "main": "dist/index.js",
   "scripts": {

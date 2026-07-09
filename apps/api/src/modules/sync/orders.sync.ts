@@ -2,9 +2,11 @@ import { and, eq } from "drizzle-orm";
 import { db } from "../../db";
 import { orders } from "../../db/schema/orders";
 import { orderItems } from "../../db/schema/order-items";
+import { orderRefunds } from "../../db/schema/order-refunds";
 import { findLocalId, upsertMapping } from "./external-mappings.service";
 import type { UpsertResult } from "./customers.sync";
-import type { WooOrder } from "./sync.schemas";
+import type { WooOrder, WooRefund } from "./sync.schemas";
+import type { DbTransaction } from "../../db";
 
 /**
  * Upserts WooCommerce orders into a store, keyed by wp_order_id, refreshing the
@@ -40,6 +42,9 @@ export async function upsertOrdersFromWoo(
         total: item.total,
         currency: item.currency,
         paymentMethod: item.paymentMethod ?? null,
+        totalRefunded: item.totalRefunded,
+        // Older connectors omit the version token; keep the last-known one.
+        ...(item.dateModified ? { wpVersion: item.dateModified } : {}),
         placedAt: item.placedAt ?? null,
         lastSyncedAt: now,
       };
@@ -112,8 +117,70 @@ export async function upsertOrdersFromWoo(
           total: line.total,
         });
       }
+
+      await upsertOrderRefunds(
+        tx,
+        storeId,
+        orderId,
+        item.currency,
+        item.refunds,
+        now,
+      );
     }
   });
 
   return { total: incoming.length, created, updated };
+}
+
+/**
+ * Upserts the refund mirror keyed by (store_id, wp_refund_id). Amount/reason
+ * refresh on every sync; `initiated_by` and `created_by` are set on INSERT only
+ * so a SaaS-initiated refund keeps its provenance when the webhook echo of the
+ * same refund arrives later (plan3 §4.2).
+ */
+export async function upsertOrderRefunds(
+  tx: DbTransaction,
+  storeId: string,
+  orderId: string,
+  currency: string,
+  refunds: WooRefund[],
+  now: Date = new Date(),
+): Promise<void> {
+  for (const refund of refunds) {
+    const [existing] = await tx
+      .select({ id: orderRefunds.id })
+      .from(orderRefunds)
+      .where(
+        and(
+          eq(orderRefunds.storeId, storeId),
+          eq(orderRefunds.wpRefundId, refund.wpRefundId),
+        ),
+      )
+      .limit(1);
+
+    if (existing) {
+      await tx
+        .update(orderRefunds)
+        .set({
+          amount: refund.amount,
+          reason: refund.reason ?? null,
+          refundedPayment: refund.refundedPayment,
+          wpDateCreated: refund.dateCreated ?? null,
+          updatedAt: now,
+        })
+        .where(eq(orderRefunds.id, existing.id));
+    } else {
+      await tx.insert(orderRefunds).values({
+        storeId,
+        orderId,
+        wpRefundId: refund.wpRefundId,
+        amount: refund.amount,
+        currency,
+        reason: refund.reason ?? null,
+        refundedPayment: refund.refundedPayment,
+        initiatedBy: "woocommerce",
+        wpDateCreated: refund.dateCreated ?? null,
+      });
+    }
+  }
 }

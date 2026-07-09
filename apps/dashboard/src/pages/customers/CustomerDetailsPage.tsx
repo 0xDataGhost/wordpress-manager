@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowRight, Save, ShoppingBag, Wallet, CalendarPlus, CalendarClock } from "lucide-react";
+import {
+  ArrowRight,
+  Save,
+  ShoppingBag,
+  Wallet,
+  CalendarPlus,
+  CalendarClock,
+  Pencil,
+} from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { ErrorState } from "@/components/shared/ErrorState";
@@ -12,9 +20,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { resolveOrderStatus } from "@/components/orders/order-status";
+import { CustomerEditDialog } from "@/components/customers/CustomerEditDialog";
 import {
   getCustomer,
   updateCustomerNotes,
+  type CustomerAddressDto,
   type CustomerDetailsDto,
   type CustomerOrderDto,
 } from "@/lib/customers-api";
@@ -37,16 +47,73 @@ function DetailRow({
   );
 }
 
+/** Address rows to render, in order, with LTR-aligned technical fields. */
+const ADDRESS_ROWS: readonly {
+  key: keyof CustomerAddressDto;
+  label: string;
+  ltr?: boolean;
+}[] = [
+  { key: "firstName", label: "الاسم الأول" },
+  { key: "lastName", label: "اسم العائلة" },
+  { key: "company", label: "الشركة" },
+  { key: "address1", label: "العنوان" },
+  { key: "address2", label: "تفاصيل إضافية" },
+  { key: "city", label: "المدينة" },
+  { key: "state", label: "المنطقة" },
+  { key: "postcode", label: "الرمز البريدي", ltr: true },
+  { key: "country", label: "الدولة", ltr: true },
+  { key: "phone", label: "الهاتف", ltr: true },
+  { key: "email", label: "البريد الإلكتروني", ltr: true },
+];
+
+/** Read-only card rendering only the address fields that are present. */
+function AddressCard({
+  title,
+  address,
+}: {
+  title: string;
+  address: CustomerAddressDto;
+}) {
+  const rows = ADDRESS_ROWS.filter((row) => {
+    const value = address[row.key];
+    return typeof value === "string" && value.trim() !== "";
+  });
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {rows.length === 0 ? (
+          <p className="py-2 text-sm text-muted-foreground">لا توجد تفاصيل.</p>
+        ) : (
+          rows.map((row) => (
+            <DetailRow key={row.key} label={row.label}>
+              {row.ltr ? (
+                <span dir="ltr">{address[row.key]}</span>
+              ) : (
+                address[row.key]
+              )}
+            </DetailRow>
+          ))
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function CustomerDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
   const canEdit = hasPermission("customers.edit");
+  const canManage = hasPermission("customers.manage");
 
   const [customer, setCustomer] = useState<CustomerDetailsDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [banner, setBanner] = useState<Banner | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const [notes, setNotes] = useState("");
   const [savedNotes, setSavedNotes] = useState("");
@@ -140,10 +207,18 @@ export function CustomerDetailsPage() {
         title={customer?.name || "تفاصيل العميل"}
         description="عرض ملف العميل ومقاييس الشراء وآخر الطلبات وإضافة ملاحظات داخلية."
         actions={
-          <Button variant="outline" onClick={() => navigate("/customers")}>
-            <ArrowRight className="h-4 w-4" />
-            رجوع إلى العملاء
-          </Button>
+          <div className="flex items-center gap-2">
+            {canManage && customer ? (
+              <Button onClick={() => setEditOpen(true)}>
+                <Pencil className="h-4 w-4" />
+                تعديل بيانات العميل
+              </Button>
+            ) : null}
+            <Button variant="outline" onClick={() => navigate("/customers")}>
+              <ArrowRight className="h-4 w-4" />
+              رجوع إلى العملاء
+            </Button>
+          </div>
         }
       />
 
@@ -222,6 +297,17 @@ export function CustomerDetailsPage() {
             </CardContent>
           </Card>
 
+          {customer.billing || customer.shipping ? (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {customer.billing ? (
+                <AddressCard title="عنوان الفوترة" address={customer.billing} />
+              ) : null}
+              {customer.shipping ? (
+                <AddressCard title="عنوان الشحن" address={customer.shipping} />
+              ) : null}
+            </div>
+          ) : null}
+
           <Card>
             <CardHeader>
               <CardTitle>آخر الطلبات</CardTitle>
@@ -277,6 +363,31 @@ export function CustomerDetailsPage() {
               )}
             </CardContent>
           </Card>
+
+          {canManage ? (
+            <CustomerEditDialog
+              open={editOpen}
+              customer={customer}
+              onOpenChange={setEditOpen}
+              onSaved={(updated) => {
+                setCustomer((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        name: updated.name,
+                        phone: updated.phone,
+                        billing: updated.billing,
+                        shipping: updated.shipping,
+                      }
+                    : prev,
+                );
+                setBanner({
+                  tone: "success",
+                  message: "تم تحديث بيانات العميل.",
+                });
+              }}
+            />
+          ) : null}
         </div>
       )}
     </div>

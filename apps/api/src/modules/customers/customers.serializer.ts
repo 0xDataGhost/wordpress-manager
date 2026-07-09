@@ -17,6 +17,8 @@ export interface CustomerDto {
   totalSpent: string;
   ordersCount: number;
   lastOrderAt: Date | null;
+  billing: Record<string, unknown> | null;
+  shipping: Record<string, unknown> | null;
   internalNotes: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -61,6 +63,14 @@ export function toCustomerDto(row: CustomerRow): CustomerDto {
     totalSpent: row.totalSpent,
     ordersCount: row.ordersCount,
     lastOrderAt: row.lastOrderAt,
+    billing:
+      row.billing && typeof row.billing === "object"
+        ? (row.billing as Record<string, unknown>)
+        : null,
+    shipping:
+      row.shipping && typeof row.shipping === "object"
+        ? (row.shipping as Record<string, unknown>)
+        : null,
     internalNotes: row.internalNotes,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

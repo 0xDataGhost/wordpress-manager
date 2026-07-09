@@ -39,6 +39,9 @@ export const products = pgTable(
     stockQuantity: integer("stock_quantity").notNull().default(0),
     status: text("status").notNull().default("draft"),
     imageUrl: text("image_url"),
+    // Entity version token from the connector (date_modified unix timestamp).
+    // Compare-and-set token for catalog write-back (Phase 26/27).
+    wpVersion: text("wp_version"),
     // Last successful publish/sync with WooCommerce, for bookkeeping.
     lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })

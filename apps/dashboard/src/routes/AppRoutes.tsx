@@ -138,6 +138,31 @@ const TeamPage = lazy(() =>
     default: m.TeamPage,
   })),
 );
+const WpCommandsPage = lazy(() =>
+  import("@/pages/wp-commands/WpCommandsPage").then((m) => ({
+    default: m.WpCommandsPage,
+  })),
+);
+const CatalogPage = lazy(() =>
+  import("@/pages/catalog/CatalogPage").then((m) => ({
+    default: m.CatalogPage,
+  })),
+);
+const CouponsListPage = lazy(() =>
+  import("@/pages/coupons/CouponsListPage").then((m) => ({
+    default: m.CouponsListPage,
+  })),
+);
+const StoreSettingsPage = lazy(() =>
+  import("@/pages/store-settings/StoreSettingsPage").then((m) => ({
+    default: m.StoreSettingsPage,
+  })),
+);
+const ReviewsPage = lazy(() =>
+  import("@/pages/reviews/ReviewsPage").then((m) => ({
+    default: m.ReviewsPage,
+  })),
+);
 const DigitalOrderPage = lazy(() =>
   import("@/pages/public/DigitalOrderPage").then((m) => ({
     default: m.DigitalOrderPage,
@@ -171,16 +196,21 @@ export function AppRoutes() {
             <Route path="/products/new" element={<ProductCreatePage />} />
             <Route path="/products/:id" element={<ProductDetailsPage />} />
             <Route path="/products/:id/edit" element={<ProductEditPage />} />
+            <Route path="/catalog" element={<CatalogPage />} />
             <Route path="/orders" element={<OrdersListPage />} />
             <Route path="/orders/:id" element={<OrderDetailsPage />} />
             <Route path="/customers" element={<CustomersListPage />} />
             <Route path="/customers/:id" element={<CustomerDetailsPage />} />
+            <Route path="/coupons" element={<CouponsListPage />} />
+            <Route path="/reviews" element={<ReviewsPage />} />
             <Route path="/team" element={<TeamPage />} />
             <Route path="/automations" element={<AutomationsListPage />} />
             <Route path="/ai" element={<AIAssistantsPage />} />
             <Route path="/notifications" element={<NotificationsListPage />} />
             <Route path="/connection" element={<ConnectionPage />} />
+            <Route path="/wp-commands" element={<WpCommandsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/store-settings" element={<StoreSettingsPage />} />
             <Route path="/audit-logs" element={<AuditLogsListPage />} />
             <Route
               path="/digital-inventory"

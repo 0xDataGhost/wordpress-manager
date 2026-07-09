@@ -82,6 +82,12 @@ class Saas_Connector_Signature {
 			);
 		}
 
+		// Phase 25: adopt the SaaS command id AFTER the signature verified —
+		// webhooks fired by this request are stamped as echoes of that command.
+		if ( class_exists( 'Saas_Connector_Echo' ) ) {
+			Saas_Connector_Echo::adopt_from_request( $request );
+		}
+
 		return true;
 	}
 

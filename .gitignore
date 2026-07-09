@@ -35,3 +35,19 @@ pnpm-debug.log*
 .cache/
 .eslintcache
 .vite/
+
+# Coverage
+coverage/
+*.lcov
+
+# PHP / vendor caches
+vendor/
+composer.phar
+
+# Build artifacts (distributable zips are built, not committed)
+*.zip
+
+# Test output
+test-results/
+playwright-report/
+.turbo/

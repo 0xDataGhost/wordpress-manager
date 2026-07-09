@@ -129,9 +129,9 @@ export async function publishProductHandler(
   req: Request,
   res: Response,
 ): Promise<void> {
-  const { storeId } = getAuth(req);
+  const { storeId, userId } = getAuth(req);
   const { id } = req.params as ProductParams;
-  const result = await publishProductToWp(storeId, id);
+  const result = await publishProductToWp(storeId, id, userId);
 
   res.status(200).json(
     successResponse(

@@ -8,17 +8,22 @@ import {
   webhookEvents,
   type WebhookEventRow,
 } from "../../db/schema/webhook-events";
+import { coupons } from "../../db/schema/coupons";
+import { productReviews } from "../../db/schema/product-reviews";
 import { touchLastSync } from "../connections/connections.service";
-import { maybeAssignCodesForOrder } from "../digital-delivery/digital-delivery.service";
-import { maybeDeliverCodesForOrder } from "../digital-delivery/delivery.service";
-import { maybeReleaseCodesForOrder } from "../digital-delivery/manual.service";
+import { confirmCommandEcho } from "../wp-commands/wp-commands.service";
+import { applyOrderDigitalSideEffects } from "../digital-delivery/order-side-effects";
 import { upsertCustomersFromWoo } from "../sync/customers.sync";
 import { upsertOrdersFromWoo } from "../sync/orders.sync";
 import { upsertProductsFromWoo } from "../sync/products.sync";
+import { upsertCouponsFromWoo } from "../coupons/coupons.service";
+import { upsertReviewsFromWoo } from "../reviews/reviews.service";
 import type {
+  CouponWebhookInput,
   CustomerWebhookInput,
   OrderWebhookInput,
   ProductWebhookInput,
+  ReviewWebhookInput,
   WebhookEntity,
   WebhookInput,
 } from "./webhooks.schemas";
@@ -37,6 +42,12 @@ export interface WebhookProcessResult {
   processed: boolean;
   /** The upsert outcome, or null for duplicates / unprocessed events. */
   action: WebhookAction | null;
+  /**
+   * True when the event was the echo of a command this SaaS issued (Phase 25):
+   * the command was confirmed and the event was recorded as "ignored" instead
+   * of being re-processed as an external change.
+   */
+  echo: boolean;
 }
 
 /**
@@ -79,7 +90,28 @@ export async function recordAndProcessWebhook(
       duplicate: true,
       processed: false,
       action: null,
+      echo: false,
     };
+  }
+
+  // Phase 25 echo suppression: when the connector marks the event as caused by
+  // one of OUR commands, confirm that command and do NOT re-process the event
+  // as an external change (prevents self-webhook loops and double side effects).
+  // An originCommandId that matches no command for this store is ignored and
+  // the event processes normally — never trust the marker blindly.
+  if (input.originCommandId) {
+    const command = await confirmCommandEcho(storeId, input.originCommandId);
+    if (command) {
+      const ignoredRow = await markIgnoredEcho(received.id);
+      await touchLastSync(storeId);
+      return {
+        eventRow: ignoredRow,
+        duplicate: false,
+        processed: false,
+        action: null,
+        echo: true,
+      };
+    }
   }
 
   try {
@@ -93,6 +125,7 @@ export async function recordAndProcessWebhook(
       duplicate: false,
       processed: true,
       action,
+      echo: false,
     };
   } catch (err) {
     const message =
@@ -128,6 +161,7 @@ async function recordEvent(
       externalEventId: input.eventId,
       status: "received",
       payload: input,
+      originCommandId: input.originCommandId ?? null,
     })
     .onConflictDoNothing({
       target: [
@@ -173,6 +207,10 @@ async function processEvent(
       return processOrderEvent(storeId, input as OrderWebhookInput);
     case "customer":
       return processCustomerEvent(storeId, input as CustomerWebhookInput);
+    case "coupon":
+      return processCouponEvent(storeId, input as CouponWebhookInput);
+    case "review":
+      return processReviewEvent(storeId, input as ReviewWebhookInput);
     default:
       // Exhaustiveness guard — entity is constrained by the route.
       throw new AppError("Unsupported webhook entity", {
@@ -222,16 +260,10 @@ async function processOrderEvent(
     )
     .limit(1);
   if (orderRow) {
-    // Phase 20.5: a cancelled/refunded order releases its codes safely (delivered
-    // codes are never returned to stock). Best-effort + idempotent; runs first so
-    // a terminal order does not also trigger assignment/delivery (both are
-    // status-gated and would no-op anyway).
-    await maybeReleaseCodesForOrder(storeId, orderRow.id, orderRow.status);
-    await maybeAssignCodesForOrder(storeId, orderRow.id);
-    // Phase 18: auto-deliver eligible orders right after assignment. Best-effort
-    // (status-gated on deliver_on_statuses + auto_delivery_enabled); never fails
-    // the webhook and is idempotent on repeated order.updated deliveries.
-    await maybeDeliverCodesForOrder(storeId, orderRow.id);
+    // Phase 20.5/18 side effects (release → assign → deliver), extracted in
+    // Phase 27 into the shared seam so SaaS-issued status/refund commands run
+    // the exact same code path as WooCommerce-originated changes.
+    await applyOrderDigitalSideEffects(storeId, orderRow.id, orderRow.status);
   }
 
   return result.created > 0 ? "created" : "updated";
@@ -243,6 +275,86 @@ async function processCustomerEvent(
   input: CustomerWebhookInput,
 ): Promise<WebhookAction> {
   const result = await upsertCustomersFromWoo(storeId, [input.data]);
+  return result.created > 0 ? "created" : "updated";
+}
+
+/**
+ * coupon.created / coupon.updated upsert via the shared coupon sync;
+ * coupon.deleted removes the mirror row (a coupon is not order-referenced).
+ */
+async function processCouponEvent(
+  storeId: string,
+  input: CouponWebhookInput,
+): Promise<WebhookAction> {
+  if (input.event === "coupon.deleted") {
+    const wpCouponId = Number(input.externalId);
+    if (!Number.isInteger(wpCouponId) || wpCouponId <= 0) return "noop";
+    const deleted = await db
+      .delete(coupons)
+      .where(
+        and(
+          eq(coupons.storeId, storeId),
+          eq(coupons.wpCouponId, wpCouponId),
+        ),
+      )
+      .returning({ id: coupons.id });
+    return deleted.length > 0 ? "archived" : "noop";
+  }
+  const result = await upsertCouponsFromWoo(storeId, [
+    {
+      wpCouponId: input.data!.wpCouponId,
+      code: input.data!.code,
+      discountType: input.data!.discountType,
+      amount: input.data!.amount,
+      description: input.data!.description ?? null,
+      freeShipping: input.data!.freeShipping,
+      usageCount: input.data!.usageCount,
+      usageLimit: input.data!.usageLimit ?? null,
+      usageLimitPerUser: input.data!.usageLimitPerUser ?? null,
+      dateExpires: input.data!.dateExpires ?? null,
+      restrictions: (input.data!.restrictions as Record<string, unknown>) ?? null,
+      dateModified: input.data!.dateModified ?? null,
+    },
+  ]);
+  return result.created > 0 ? "created" : "updated";
+}
+
+/**
+ * review.created / review.updated upsert via the shared review sync;
+ * review.deleted removes the mirror row.
+ */
+async function processReviewEvent(
+  storeId: string,
+  input: ReviewWebhookInput,
+): Promise<WebhookAction> {
+  if (input.event === "review.deleted") {
+    const wpReviewId = Number(input.externalId);
+    if (!Number.isInteger(wpReviewId) || wpReviewId <= 0) return "noop";
+    const deleted = await db
+      .delete(productReviews)
+      .where(
+        and(
+          eq(productReviews.storeId, storeId),
+          eq(productReviews.wpReviewId, wpReviewId),
+        ),
+      )
+      .returning({ id: productReviews.id });
+    return deleted.length > 0 ? "archived" : "noop";
+  }
+  const result = await upsertReviewsFromWoo(storeId, [
+    {
+      wpReviewId: input.data!.wpReviewId,
+      wpProductId: input.data!.wpProductId ?? null,
+      productName: input.data!.productName ?? null,
+      author: input.data!.author ?? null,
+      authorEmail: input.data!.authorEmail ?? null,
+      rating: input.data!.rating,
+      content: input.data!.content ?? null,
+      status: input.data!.status,
+      dateCreated: input.data!.dateCreated ?? null,
+      dateModified: input.data!.dateModified ?? null,
+    },
+  ]);
   return result.created > 0 ? "created" : "updated";
 }
 
@@ -270,6 +382,20 @@ async function archiveProductByExternalId(
     )
     .returning({ id: products.id });
   return updated.length > 0 ? "archived" : "noop";
+}
+
+/** Marks a command echo as "ignored" — recorded, confirmed, never re-applied. */
+async function markIgnoredEcho(eventId: string): Promise<WebhookEventRow> {
+  const now = new Date();
+  const [row] = await db
+    .update(webhookEvents)
+    .set({ status: "ignored", processedAt: now })
+    .where(eq(webhookEvents.id, eventId))
+    .returning();
+  if (!row) {
+    throw new Error("Failed to finalize webhook event");
+  }
+  return row;
 }
 
 /** Marks an event processed with the completion timestamp. */

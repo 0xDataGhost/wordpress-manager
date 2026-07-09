@@ -73,8 +73,13 @@ function webhookHandler(entity: WebhookEntity) {
           duplicate: result.duplicate,
           processed: result.processed,
           action: result.action,
+          echo: result.echo,
         },
-        result.duplicate ? "Duplicate webhook ignored" : "Webhook processed",
+        result.duplicate
+          ? "Duplicate webhook ignored"
+          : result.echo
+            ? "Command echo confirmed"
+            : "Webhook processed",
       ),
     );
   };
@@ -88,6 +93,12 @@ export const orderWebhookHandler = webhookHandler("order");
 
 /** POST /wp/webhooks/customers — customer created/updated (connector auth). */
 export const customerWebhookHandler = webhookHandler("customer");
+
+/** POST /wp/webhooks/coupons — coupon created/updated/deleted (connector auth). */
+export const couponWebhookHandler = webhookHandler("coupon");
+
+/** POST /wp/webhooks/reviews — review created/updated/deleted (connector auth). */
+export const reviewWebhookHandler = webhookHandler("review");
 
 /**
  * GET /wp/webhooks — recent webhook events for the store (JWT, settings.view).

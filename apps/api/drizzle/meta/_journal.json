@@ -134,6 +134,55 @@
       "when": 1782600000000,
       "tag": "0018_code_assignments_assigned_at_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1783635215687,
+      "tag": "0019_wp_command_outbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1783636219006,
+      "tag": "0020_order_write_back",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1783637081205,
+      "tag": "0021_catalog_taxonomies",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1783637583524,
+      "tag": "0022_coupons",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1783637909838,
+      "tag": "0023_customers_reviews_writeback",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1783638654739,
+      "tag": "0024_store_config",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1783640622739,
+      "tag": "0025_refund_in_flight_guard",
+      "breakpoints": true
     }
   ]
 }

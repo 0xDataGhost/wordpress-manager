@@ -1,4 +1,5 @@
 import {
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -56,6 +57,10 @@ export const storeConnections = pgTable(
     wpVersion: text("wp_version"),
     wcVersion: text("wc_version"),
     connectorVersion: text("connector_version"),
+    // Capability slugs reported by the connector on connect/verify (Phase 25).
+    // The dashboard gates write-back features on this list so an outdated
+    // plugin degrades to "update the connector" notices instead of erroring.
+    connectorCapabilities: jsonb("connector_capabilities"),
     lastConnectedAt: timestamp("last_connected_at", { withTimezone: true }),
     lastHealthCheckAt: timestamp("last_health_check_at", {
       withTimezone: true,

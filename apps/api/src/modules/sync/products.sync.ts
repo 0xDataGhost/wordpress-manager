@@ -59,6 +59,7 @@ export async function upsertProductsFromWoo(
         storeId,
         toProductUpsertInput(woo),
         now,
+        woo.dateModified ?? null,
       );
       if (outcome.created) created += 1;
       else updated += 1;

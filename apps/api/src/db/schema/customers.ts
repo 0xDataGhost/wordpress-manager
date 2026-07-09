@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   index,
   integer,
+  jsonb,
   numeric,
   pgTable,
   text,
@@ -41,6 +42,12 @@ export const customers = pgTable(
       .default("0"),
     ordersCount: integer("orders_count").notNull().default(0),
     lastOrderAt: timestamp("last_order_at", { withTimezone: true }),
+    // WooCommerce billing/shipping addresses (Phase 29 write-back). Mirror of
+    // the Woo customer address objects; editable from the dashboard.
+    billing: jsonb("billing"),
+    shipping: jsonb("shipping"),
+    // date_modified unix timestamp — compare-and-set token for edits.
+    wpVersion: text("wp_version"),
     // Dashboard-only operator notes. Never written by WooCommerce sync.
     internalNotes: text("internal_notes"),
     // Last successful sync with WooCommerce, for bookkeeping.

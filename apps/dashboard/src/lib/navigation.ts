@@ -2,6 +2,7 @@ import {
   LayoutDashboard,
   Package,
   ShoppingCart,
+  FolderTree,
   Users,
   ShieldCheck,
   Workflow,
@@ -13,7 +14,11 @@ import {
   KeyRound,
   BarChart3,
   Send,
+  TerminalSquare,
+  Ticket,
   Truck,
+  Star,
+  Store,
   type LucideIcon,
 } from "lucide-react";
 
@@ -47,6 +52,12 @@ export const navItems: NavItem[] = [
     label: "المنتجات",
     to: "/products",
     icon: Package,
+    permission: "products.view",
+  },
+  {
+    label: "تصنيفات المتجر",
+    to: "/catalog",
+    icon: FolderTree,
     permission: "products.view",
   },
   {
@@ -86,6 +97,18 @@ export const navItems: NavItem[] = [
     permission: "customers.view",
   },
   {
+    label: "الكوبونات",
+    to: "/coupons",
+    icon: Ticket,
+    permission: "coupons.view",
+  },
+  {
+    label: "التقييمات",
+    to: "/reviews",
+    icon: Star,
+    permission: "reviews.view",
+  },
+  {
     label: "الموظفين والصلاحيات",
     to: "/team",
     icon: ShieldCheck,
@@ -111,10 +134,22 @@ export const navItems: NavItem[] = [
     permission: "settings.view",
   },
   {
+    label: "أوامر ووردبريس",
+    to: "/wp-commands",
+    icon: TerminalSquare,
+    permission: "wp_commands.view",
+  },
+  {
     label: "الإعدادات",
     to: "/settings",
     icon: Settings,
     permission: "settings.view",
+  },
+  {
+    label: "إعدادات المتجر",
+    to: "/store-settings",
+    icon: Store,
+    permission: "store_settings.view",
   },
   {
     label: "سجلّ التدقيق",

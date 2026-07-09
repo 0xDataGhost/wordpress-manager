@@ -1,8 +1,10 @@
 import { z } from "zod";
 import {
+  wooCouponSchema,
   wooCustomerSchema,
   wooOrderSchema,
   wooProductSchema,
+  wooReviewSchema,
 } from "../sync/sync.schemas";
 
 /**
@@ -31,11 +33,22 @@ export const WEBHOOK_EVENT_TYPES = [
   "order.updated",
   "customer.created",
   "customer.updated",
+  "coupon.created",
+  "coupon.updated",
+  "coupon.deleted",
+  "review.created",
+  "review.updated",
+  "review.deleted",
 ] as const;
 export type WebhookEventType = (typeof WEBHOOK_EVENT_TYPES)[number];
 
-/** The three entity families a webhook endpoint can target. */
-export type WebhookEntity = "product" | "order" | "customer";
+/** The entity families a webhook endpoint can target. */
+export type WebhookEntity =
+  | "product"
+  | "order"
+  | "customer"
+  | "coupon"
+  | "review";
 
 /**
  * Idempotency key. Accepts a string or number (the connector may send either),
@@ -61,6 +74,18 @@ const externalIdField = z
 const occurredAtField = z.string().trim().max(40).optional();
 
 /**
+ * Echo marker (Phase 25): set by the connector when the change that fired this
+ * webhook was caused by a SaaS command (the connector round-trips the
+ * X-Saas-Command-Id it received). A matching command is confirmed instead of
+ * re-processing the event as an external change. Non-UUID values are treated
+ * as absent — never trusted into a uuid column.
+ */
+const originCommandIdField = z.string().uuid().optional();
+
+/** Entity version (date_modified) reported by WordPress; informational. */
+const entityVersionField = z.string().trim().max(64).optional();
+
+/**
  * Product webhook. `data` is required for created/updated (carries the full
  * normalized product) and optional for deleted (only externalId is needed to
  * locate and archive the local row).
@@ -71,6 +96,8 @@ export const productWebhookSchema = z
     eventId: eventIdField,
     externalId: externalIdField,
     occurredAt: occurredAtField,
+    originCommandId: originCommandIdField,
+    entityVersion: entityVersionField,
     data: wooProductSchema.optional(),
   })
   .superRefine((value, ctx) => {
@@ -89,6 +116,8 @@ export const orderWebhookSchema = z.object({
   eventId: eventIdField,
   externalId: externalIdField,
   occurredAt: occurredAtField,
+  originCommandId: originCommandIdField,
+  entityVersion: entityVersionField,
   data: wooOrderSchema,
 });
 
@@ -98,8 +127,52 @@ export const customerWebhookSchema = z.object({
   eventId: eventIdField,
   externalId: externalIdField,
   occurredAt: occurredAtField,
+  originCommandId: originCommandIdField,
+  entityVersion: entityVersionField,
   data: wooCustomerSchema,
 });
+
+/** Coupon webhook. `data` required for created/updated, optional for deleted. */
+export const couponWebhookSchema = z
+  .object({
+    event: z.enum(["coupon.created", "coupon.updated", "coupon.deleted"]),
+    eventId: eventIdField,
+    externalId: externalIdField,
+    occurredAt: occurredAtField,
+    originCommandId: originCommandIdField,
+    entityVersion: entityVersionField,
+    data: wooCouponSchema.optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.event !== "coupon.deleted" && !value.data) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["data"],
+        message: "data is required for coupon.created and coupon.updated",
+      });
+    }
+  });
+
+/** Review webhook. `data` required for created/updated, optional for deleted. */
+export const reviewWebhookSchema = z
+  .object({
+    event: z.enum(["review.created", "review.updated", "review.deleted"]),
+    eventId: eventIdField,
+    externalId: externalIdField,
+    occurredAt: occurredAtField,
+    originCommandId: originCommandIdField,
+    entityVersion: entityVersionField,
+    data: wooReviewSchema.optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.event !== "review.deleted" && !value.data) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["data"],
+        message: "data is required for review.created and review.updated",
+      });
+    }
+  });
 
 /** Query for GET /wp/webhooks (recent events for the store). */
 export const listWebhookEventsQuerySchema = z.object({
@@ -109,6 +182,8 @@ export const listWebhookEventsQuerySchema = z.object({
 export type ProductWebhookInput = z.infer<typeof productWebhookSchema>;
 export type OrderWebhookInput = z.infer<typeof orderWebhookSchema>;
 export type CustomerWebhookInput = z.infer<typeof customerWebhookSchema>;
+export type CouponWebhookInput = z.infer<typeof couponWebhookSchema>;
+export type ReviewWebhookInput = z.infer<typeof reviewWebhookSchema>;
 export type ListWebhookEventsQuery = z.infer<
   typeof listWebhookEventsQuerySchema
 >;
@@ -117,4 +192,6 @@ export type ListWebhookEventsQuery = z.infer<
 export type WebhookInput =
   | ProductWebhookInput
   | OrderWebhookInput
-  | CustomerWebhookInput;
+  | CustomerWebhookInput
+  | CouponWebhookInput
+  | ReviewWebhookInput;

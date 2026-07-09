@@ -39,6 +39,8 @@ class Saas_Connector_Normalize {
 			'stockQuantity'    => (int) $product->get_stock_quantity(),
 			'status'           => $product->get_status(),
 			'images'           => self::product_images( $product ),
+			// Phase 25/27: compare-and-set version token.
+			'dateModified'     => Saas_Connector_Versioning::version_of( $product->get_date_modified() ),
 		);
 	}
 
@@ -111,7 +113,33 @@ class Saas_Connector_Normalize {
 			'wpCustomerId'  => $customer_id > 0 ? $customer_id : null,
 			'placedAt'      => $created ? $created->date( 'c' ) : null,
 			'lineItems'     => $line_items,
+			// Phase 27: refund mirror + compare-and-set version token.
+			'totalRefunded' => (string) $order->get_total_refunded(),
+			'refunds'       => self::order_refunds( $order ),
+			'dateModified'  => Saas_Connector_Versioning::version_of( $order->get_date_modified() ),
 		);
+	}
+
+	/**
+	 * Normalize an order's refunds to the SaaS mirror shape (Phase 27).
+	 *
+	 * @param WC_Order $order Order.
+	 * @return array<int,array<string,mixed>>
+	 */
+	public static function order_refunds( WC_Order $order ) {
+		$refunds = array();
+		foreach ( $order->get_refunds() as $refund ) {
+			$created   = $refund->get_date_created();
+			$refunds[] = array(
+				'wpRefundId'      => $refund->get_id(),
+				'amount'          => (string) $refund->get_amount(),
+				'reason'          => (string) $refund->get_reason(),
+				'refundedPayment' => 'yes' === $refund->get_meta( Saas_Connector_Orders::META_GATEWAY_REFUNDED )
+					|| (bool) $refund->get_refunded_payment(),
+				'dateCreated'     => $created ? $created->date( 'c' ) : null,
+			);
+		}
+		return $refunds;
 	}
 
 	/**

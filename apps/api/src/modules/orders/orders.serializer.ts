@@ -1,6 +1,7 @@
 import type { CustomerRow } from "../../db/schema/customers";
 import type { OrderItemRow } from "../../db/schema/order-items";
 import type { OrderRow } from "../../db/schema/orders";
+import type { OrderRefundRow } from "../../db/schema/order-refunds";
 
 /**
  * Compact customer summary attached to an order. Mirrors the customer aggregate
@@ -40,6 +41,7 @@ export interface OrderDto {
   orderNumber: string | null;
   status: string;
   total: string;
+  totalRefunded: string;
   currency: string;
   paymentMethod: string | null;
   internalNotes: string | null;
@@ -97,6 +99,7 @@ export function toOrderDto(
     orderNumber: row.orderNumber,
     status: row.status,
     total: row.total,
+    totalRefunded: row.totalRefunded,
     currency: row.currency,
     paymentMethod: row.paymentMethod,
     internalNotes: row.internalNotes,
@@ -116,5 +119,36 @@ export function toOrderDetailsDto(
   return {
     ...toOrderDto(row, customer),
     items: items.map(toOrderItemDto),
+  };
+}
+
+/** Public API shape of an order refund (Phase 27). Money stays a string. */
+export interface OrderRefundDto {
+  id: string;
+  orderId: string;
+  wpRefundId: number | null;
+  amount: string;
+  currency: string;
+  reason: string | null;
+  refundedPayment: boolean;
+  initiatedBy: string;
+  createdBy: string | null;
+  wpDateCreated: Date | null;
+  createdAt: Date;
+}
+
+export function toOrderRefundDto(row: OrderRefundRow): OrderRefundDto {
+  return {
+    id: row.id,
+    orderId: row.orderId,
+    wpRefundId: row.wpRefundId,
+    amount: row.amount,
+    currency: row.currency,
+    reason: row.reason,
+    refundedPayment: row.refundedPayment,
+    initiatedBy: row.initiatedBy,
+    createdBy: row.createdBy,
+    wpDateCreated: row.wpDateCreated,
+    createdAt: row.createdAt,
   };
 }

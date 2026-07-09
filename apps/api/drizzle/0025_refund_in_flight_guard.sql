@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "wp_commands_refund_in_flight_unique" ON "wp_commands" USING btree ("store_id","target_wp_id") WHERE "wp_commands"."domain" = 'order' and "wp_commands"."action" = 'create_refund' and "wp_commands"."status" in ('pending','sending');

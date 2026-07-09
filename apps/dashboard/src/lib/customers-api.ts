@@ -7,12 +7,34 @@
  *   listCustomers       → GET   /customers            (JWT, customers.view)
  *   getCustomer         → GET   /customers/:id        (JWT, customers.view)
  *   updateCustomerNotes → PATCH /customers/:id/notes  (JWT, customers.edit)
+ *   updateCustomerWp    → PUT   /customers/:id        (JWT, customers.manage)
  *
  * Failures surface as `ApiError` from lib/http, whose `.message` carries the
- * backend's user-facing text — the pages render `error.message` directly.
+ * backend's user-facing text — the pages render `error.message` directly. A
+ * 409 (WooCommerce has a newer version) and a 400 (guest/unsynced customer)
+ * from updateCustomerWp come through the same channel.
  */
 
 import { apiRequest } from "./http";
+
+/**
+ * A WooCommerce billing/shipping address. Every field is optional; `country`
+ * is an uppercase 2-letter ISO code. Shipping addresses have no email field
+ * in WooCommerce, but the shared shape keeps it optional for reuse.
+ */
+export interface CustomerAddressDto {
+  firstName?: string;
+  lastName?: string;
+  company?: string;
+  address1?: string;
+  address2?: string;
+  city?: string;
+  state?: string;
+  postcode?: string;
+  country?: string;
+  phone?: string;
+  email?: string;
+}
 
 export interface CustomerDto {
   id: string;
@@ -26,8 +48,25 @@ export interface CustomerDto {
   ordersCount: number;
   lastOrderAt: string | null;
   internalNotes: string | null;
+  /** WooCommerce billing address; null when the customer has none synced. */
+  billing: CustomerAddressDto | null;
+  /** WooCommerce shipping address; null when the customer has none synced. */
+  shipping: CustomerAddressDto | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Body for the edit-in-WooCommerce action. Every field is optional, but the
+ * backend requires at least one top-level field. `billing`/`shipping` carry
+ * only the address keys the dialog touches.
+ */
+export interface CustomerWpUpdateInput {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  billing?: CustomerAddressDto;
+  shipping?: CustomerAddressDto;
 }
 
 /** Read-only linked order shown on the customer details page. */
@@ -97,5 +136,21 @@ export async function updateCustomerNotes(
   return apiRequest<CustomerDetailsDto>(`/customers/${id}/notes`, {
     method: "PATCH",
     body: { internalNotes },
+  });
+}
+
+/**
+ * Edit the customer's WooCommerce profile (name, phone, billing/shipping
+ * addresses). Returns the refreshed customer. A 409 means WooCommerce holds a
+ * newer version; a 400 means the customer is a guest/unsynced — both arrive as
+ * `ApiError` so the page can surface `.message`.
+ */
+export async function updateCustomerWp(
+  id: string,
+  body: CustomerWpUpdateInput,
+): Promise<CustomerDto> {
+  return apiRequest<CustomerDto>(`/customers/${id}`, {
+    method: "PUT",
+    body,
   });
 }

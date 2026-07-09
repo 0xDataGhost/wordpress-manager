@@ -8,6 +8,7 @@ import { ConnectionStatusCard } from "@/components/connection/ConnectionStatusCa
 import { ApiKeyCard } from "@/components/connection/ApiKeyCard";
 import { ConnectStoreCard } from "@/components/connection/ConnectStoreCard";
 import { SyncCard } from "@/components/connection/SyncCard";
+import { ParityPanel } from "@/components/connection/ParityPanel";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
   disconnectStore,
@@ -146,6 +147,10 @@ export function ConnectionPage() {
           </div>
 
           <SyncCard status={status} />
+
+          {status.status === "connected" ? (
+            <ParityPanel isConnected />
+          ) : null}
         </div>
       )}
     </div>

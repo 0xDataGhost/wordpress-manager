@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowRight, Save } from "lucide-react";
+import { ArrowRight, RefreshCw, Save } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { DataTable, type Column } from "@/components/shared/DataTable";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,17 +16,34 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { resolveOrderStatus } from "@/components/orders/order-status";
+import {
+  ORDER_STATUS_OPTIONS,
+  resolveOrderStatus,
+} from "@/components/orders/order-status";
+import { OrderWpNotesCard } from "@/components/orders/OrderWpNotesCard";
+import { OrderRefundsCard } from "@/components/orders/OrderRefundsCard";
 import { OrderDigitalSection } from "@/components/digital-delivery/OrderDigitalSection";
+import { ApiError } from "@/lib/http";
 import {
   getOrder,
   updateOrderNotes,
+  updateOrderStatus,
   type OrderDetailsDto,
+  type OrderDto,
   type OrderItemDto,
+  type OrderStatus,
 } from "@/lib/orders-api";
 import { formatDateTime, formatMoney } from "@/lib/utils";
 
-type Banner = { tone: "success" | "error"; message: string };
+type Banner = {
+  tone: "success" | "error";
+  message: string;
+  /** Offer a reload action (WordPress-conflict recovery). */
+  refresh?: boolean;
+};
+
+const selectClass =
+  "flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
 function DetailRow({
   label,
@@ -48,6 +66,7 @@ export function OrderDetailsPage() {
   const { hasPermission } = useAuth();
   const canEdit = hasPermission("orders.edit");
   const canViewDigital = hasPermission("digital_delivery.view");
+  const canManageStatus = hasPermission("orders.manage_status");
 
   const [order, setOrder] = useState<OrderDetailsDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,6 +76,9 @@ export function OrderDetailsPage() {
   const [notes, setNotes] = useState("");
   const [savedNotes, setSavedNotes] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null);
+  const [changingStatus, setChangingStatus] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -98,6 +120,45 @@ export function OrderDetailsPage() {
       });
     } finally {
       setSaving(false);
+    }
+  }
+
+  /** Merge a fresh order mirror into local state, keeping the loaded items. */
+  const applyOrderUpdate = useCallback((updated: OrderDto) => {
+    setOrder((prev) =>
+      prev ? { ...prev, ...updated, items: prev.items } : prev,
+    );
+  }, []);
+
+  async function handleConfirmStatusChange() {
+    if (!id || !pendingStatus) return;
+    setChangingStatus(true);
+    setBanner(null);
+    try {
+      const updated = await updateOrderStatus(id, pendingStatus);
+      applyOrderUpdate(updated);
+      setPendingStatus(null);
+      setBanner({
+        tone: "success",
+        message: `تم تغيير حالة الطلب إلى «${resolveOrderStatus(updated.status).label}».`,
+      });
+    } catch (err) {
+      setPendingStatus(null);
+      if (err instanceof ApiError && err.status === 409) {
+        setBanner({
+          tone: "error",
+          message: "تم تعديل الطلب في ووردبريس — حدّث الصفحة وحاول مجدداً.",
+          refresh: true,
+        });
+      } else {
+        setBanner({
+          tone: "error",
+          message:
+            err instanceof Error ? err.message : "تعذّر تغيير حالة الطلب.",
+        });
+      }
+    } finally {
+      setChangingStatus(false);
     }
   }
 
@@ -170,17 +231,63 @@ export function OrderDetailsPage() {
               className={
                 banner.tone === "success"
                   ? "rounded-md border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400"
-                  : "rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+                  : "flex flex-wrap items-center justify-between gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
               }
             >
               {banner.message}
+              {banner.refresh ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setBanner(null);
+                    void load();
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  تحديث الصفحة
+                </Button>
+              ) : null}
             </div>
           ) : null}
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Card className="lg:col-span-2">
-              <CardHeader>
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle>ملخص الطلب</CardTitle>
+                {canManageStatus && order.wpOrderId !== null ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {(() => {
+                      const meta = resolveOrderStatus(order.status);
+                      return (
+                        <StatusBadge label={meta.label} tone={meta.tone} />
+                      );
+                    })()}
+                    <select
+                      className={selectClass}
+                      value={order.status}
+                      onChange={(e) => {
+                        const next = e.target.value as OrderStatus;
+                        if (next !== order.status) setPendingStatus(next);
+                      }}
+                      disabled={changingStatus}
+                      aria-label="تغيير حالة الطلب"
+                    >
+                      {ORDER_STATUS_OPTIONS.every(
+                        (option) => option.value !== order.status,
+                      ) ? (
+                        <option value={order.status} disabled>
+                          {resolveOrderStatus(order.status).label}
+                        </option>
+                      ) : null}
+                      {ORDER_STATUS_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
               </CardHeader>
               <CardContent className="pt-0">
                 <DetailRow label="رقم الطلب">
@@ -197,6 +304,13 @@ export function OrderDetailsPage() {
                     {formatMoney(order.total, order.currency)}
                   </span>
                 </DetailRow>
+                {Number(order.totalRefunded) > 0 ? (
+                  <DetailRow label="المبلغ المسترد">
+                    <span dir="ltr">
+                      {formatMoney(order.totalRefunded, order.currency)}
+                    </span>
+                  </DetailRow>
+                ) : null}
                 <DetailRow label="العملة">
                   <span dir="ltr">{order.currency}</span>
                 </DetailRow>
@@ -325,6 +439,33 @@ export function OrderDetailsPage() {
               )}
             </CardContent>
           </Card>
+
+          {order.wpOrderId !== null ? (
+            <>
+              <OrderWpNotesCard orderId={order.id} />
+              <OrderRefundsCard
+                orderId={order.id}
+                orderTotal={order.total}
+                totalRefunded={order.totalRefunded}
+                currency={order.currency}
+                onOrderUpdated={applyOrderUpdate}
+              />
+            </>
+          ) : null}
+
+          <ConfirmDialog
+            open={pendingStatus !== null}
+            onOpenChange={(open) => {
+              if (!open && !changingStatus) setPendingStatus(null);
+            }}
+            title="تغيير حالة الطلب في ووردبريس؟"
+            description={`سيتم تغيير الحالة إلى «${
+              pendingStatus ? resolveOrderStatus(pendingStatus).label : ""
+            }». سيتم تشغيل إجراءات ووكومرس المعتادة مثل رسائل البريد.`}
+            confirmLabel={changingStatus ? "جارٍ التغيير…" : "تغيير الحالة"}
+            loading={changingStatus}
+            onConfirm={() => void handleConfirmStatusChange()}
+          />
         </div>
       )}
     </div>

@@ -9,9 +9,19 @@ import {
   updateOrderNotesHandler,
 } from "./orders.controller";
 import {
+  addOrderWpNoteHandler,
+  createOrderRefundHandler,
+  listOrderRefundsHandler,
+  listOrderWpNotesHandler,
+  updateOrderStatusHandler,
+} from "./orders.wp.controller";
+import {
+  addOrderWpNoteSchema,
+  createOrderRefundSchema,
   listOrdersQuerySchema,
   orderParamsSchema,
   updateOrderNotesSchema,
+  updateOrderStatusSchema,
 } from "./orders.schemas";
 
 const router = Router();
@@ -41,6 +51,54 @@ router.patch(
   requirePermission("orders.edit"),
   validate({ params: orderParamsSchema, body: updateOrderNotesSchema }),
   asyncHandler(updateOrderNotesHandler),
+);
+
+// ---- Phase 27: order write-back to WooCommerce (via the command outbox) ----
+
+// PUT /orders/:id/status — change the order status in WooCommerce.
+router.put(
+  "/:id/status",
+  authenticate,
+  requirePermission("orders.manage_status"),
+  validate({ params: orderParamsSchema, body: updateOrderStatusSchema }),
+  asyncHandler(updateOrderStatusHandler),
+);
+
+// GET /orders/:id/wp-notes — WooCommerce order notes (live read).
+router.get(
+  "/:id/wp-notes",
+  authenticate,
+  requirePermission("orders.view"),
+  validate({ params: orderParamsSchema }),
+  asyncHandler(listOrderWpNotesHandler),
+);
+
+// POST /orders/:id/wp-notes — add a WooCommerce order note.
+router.post(
+  "/:id/wp-notes",
+  authenticate,
+  requirePermission("orders.add_notes"),
+  validate({ params: orderParamsSchema, body: addOrderWpNoteSchema }),
+  asyncHandler(addOrderWpNoteHandler),
+);
+
+// POST /orders/:id/refunds — create a refund (money-sensitive; refundPayment
+// additionally requires orders.refund_payment, checked in the controller).
+router.post(
+  "/:id/refunds",
+  authenticate,
+  requirePermission("orders.refund"),
+  validate({ params: orderParamsSchema, body: createOrderRefundSchema }),
+  asyncHandler(createOrderRefundHandler),
+);
+
+// GET /orders/:id/refunds — the order's refunds (mirror).
+router.get(
+  "/:id/refunds",
+  authenticate,
+  requirePermission("orders.view"),
+  validate({ params: orderParamsSchema }),
+  asyncHandler(listOrderRefundsHandler),
 );
 
 export default router;

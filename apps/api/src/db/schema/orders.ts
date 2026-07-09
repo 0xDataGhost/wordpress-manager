@@ -81,6 +81,13 @@ export const orders = pgTable(
     total: numeric("total", { precision: 12, scale: 2 }).notNull().default("0"),
     currency: text("currency").notNull().default("SAR"),
     paymentMethod: text("payment_method"),
+    // Mirror of WooCommerce get_total_refunded(); exact decimal (Phase 27).
+    totalRefunded: numeric("total_refunded", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    // Entity version token from the connector (date_modified unix timestamp).
+    // Sent back as the compare-and-set token on money-sensitive commands.
+    wpVersion: text("wp_version"),
     // Dashboard-only operator notes. Never written by WooCommerce sync.
     internalNotes: text("internal_notes"),
     // Digital fulfillment (Phase 17). Maintained by the assignment engine and

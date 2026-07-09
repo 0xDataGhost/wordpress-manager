@@ -97,6 +97,7 @@ export interface ConnectSiteInput {
   wpVersion?: string;
   wcVersion?: string;
   connectorVersion?: string;
+  capabilities?: string[];
 }
 
 /** Marks a connection connected and records the reported site metadata. */
@@ -113,6 +114,7 @@ export async function markConnected(
       wpVersion: site.wpVersion ?? null,
       wcVersion: site.wcVersion ?? null,
       connectorVersion: site.connectorVersion ?? null,
+      connectorCapabilities: site.capabilities ?? null,
       lastConnectedAt: now,
       lastHealthCheckAt: now,
       lastHealthStatus: "ok",
@@ -177,6 +179,7 @@ export async function disconnect(
       wpVersion: null,
       wcVersion: null,
       connectorVersion: null,
+      connectorCapabilities: null,
       lastHealthStatus: null,
       updatedAt: new Date(),
     })

@@ -18,6 +18,18 @@ export interface WpRequestResult {
   message: string;
 }
 
+/** HTTP verbs the connector's REST surface accepts. */
+export type WpRequestMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+export interface WpRequestOptions {
+  /**
+   * Extra request headers (e.g. X-Saas-Command-Id / X-Saas-Idempotency-Key for
+   * outbox commands). Headers are transport metadata — the HMAC signature keeps
+   * covering "{timestamp}.{body}" exactly as before.
+   */
+  headers?: Record<string, string>;
+}
+
 /** Raised when a connection cannot be used for an outbound SaaS -> WP call. */
 export class WpClientUnavailableError extends ServiceUnavailableError {}
 
@@ -132,9 +144,10 @@ function buildUrl(siteUrl: string, path: string): string {
  */
 export async function wpRequest(
   connection: StoreConnectionRow,
-  method: "GET" | "POST" | "PUT",
+  method: WpRequestMethod,
   path: string,
   body?: unknown,
+  options: WpRequestOptions = {},
 ): Promise<WpRequestResult> {
   if (!connection.siteUrl) {
     return {
@@ -153,6 +166,7 @@ export async function wpRequest(
   const jsonBody = body === undefined ? "" : JSON.stringify(body);
   const headers: Record<string, string> = {
     Accept: "application/json",
+    ...options.headers,
     ...signatureHeaders(jsonBody, secret),
   };
   if (body !== undefined) {

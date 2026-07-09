@@ -5,16 +5,20 @@ import { authenticateConnector } from "../../middleware/authenticate-connector";
 import { requirePermission } from "../../middleware/authorize";
 import { validate } from "../../middleware/validate";
 import {
+  couponWebhookHandler,
   customerWebhookHandler,
   listWebhookEventsHandler,
   orderWebhookHandler,
   productWebhookHandler,
+  reviewWebhookHandler,
 } from "./webhooks.controller";
 import {
+  couponWebhookSchema,
   customerWebhookSchema,
   listWebhookEventsQuerySchema,
   orderWebhookSchema,
   productWebhookSchema,
+  reviewWebhookSchema,
 } from "./webhooks.schemas";
 
 /**
@@ -44,6 +48,18 @@ router.post(
   authenticateConnector,
   validate({ body: customerWebhookSchema }),
   asyncHandler(customerWebhookHandler),
+);
+router.post(
+  "/coupons",
+  authenticateConnector,
+  validate({ body: couponWebhookSchema }),
+  asyncHandler(couponWebhookHandler),
+);
+router.post(
+  "/reviews",
+  authenticateConnector,
+  validate({ body: reviewWebhookSchema }),
+  asyncHandler(reviewWebhookHandler),
 );
 
 // Read-only status surface for the dashboard / debugging.

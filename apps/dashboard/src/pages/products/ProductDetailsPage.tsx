@@ -17,6 +17,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { PRODUCT_STATUS_META } from "@/components/products/product-status";
 import { DigitalFulfillmentSummary } from "@/components/products/DigitalFulfillmentSummary";
+import { ProductMediaSection } from "@/components/catalog/ProductMediaSection";
+import { ProductVariationsSection } from "@/components/catalog/ProductVariationsSection";
+import { ProductWpDeleteSection } from "@/components/catalog/ProductWpDeleteSection";
 import {
   archiveProduct,
   getProduct,
@@ -52,6 +55,8 @@ export function ProductDetailsPage() {
   const { hasPermission } = useAuth();
   const canEdit = hasPermission("products.edit");
   const canArchive = hasPermission("products.delete");
+  const canDelete = hasPermission("products.delete");
+  const canManageMedia = hasPermission("products.manage_media");
   const canViewDigital = hasPermission("digital_inventory.view");
   const [product, setProduct] = useState<ProductDto | null>(null);
   const [digital, setDigital] = useState<DigitalSettingsDto | null>(null);
@@ -270,6 +275,43 @@ export function ProductDetailsPage() {
 
           {canViewDigital && digital ? (
             <DigitalFulfillmentSummary settings={digital} />
+          ) : null}
+
+          {/* Catalog-control actions (Phase 26) — only for products linked to
+              WooCommerce, since they act on the store entity directly. */}
+          {product.wpProductId != null ? (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {canManageMedia ? (
+                <ProductMediaSection
+                  wpProductId={product.wpProductId}
+                  onUploaded={(message) => {
+                    setBanner({ tone: "success", message });
+                    void load();
+                  }}
+                />
+              ) : null}
+              {canEdit ? (
+                <ProductVariationsSection
+                  productId={product.id}
+                  onMessage={(tone, message) => setBanner({ tone, message })}
+                />
+              ) : null}
+              {canDelete ? (
+                <div className="lg:col-span-2">
+                  <ProductWpDeleteSection
+                    productId={product.id}
+                    onDeleted={(updated) => {
+                      setProduct(updated);
+                      setBanner({
+                        tone: "success",
+                        message: "تم حذف المنتج من ووردبريس.",
+                      });
+                    }}
+                    onError={(message) => setBanner({ tone: "error", message })}
+                  />
+                </div>
+              ) : null}
+            </div>
           ) : null}
         </div>
       )}

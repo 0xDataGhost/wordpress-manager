@@ -19,7 +19,7 @@ class Saas_Connector_Api_Client {
 	/**
 	 * Non-secret metadata describing this site, sent on connect.
 	 *
-	 * @return array<string,string>
+	 * @return array<string,mixed>
 	 */
 	public static function site_payload() {
 		$wc_version = defined( 'WC_VERSION' ) ? WC_VERSION : '';
@@ -28,6 +28,9 @@ class Saas_Connector_Api_Client {
 			'wpVersion'        => get_bloginfo( 'version' ),
 			'wcVersion'        => $wc_version,
 			'connectorVersion' => SAAS_CONNECTOR_VERSION,
+			// Phase 25: capability handshake — the SaaS gates write-back
+			// features per store on this list.
+			'capabilities'     => Saas_Connector_Capabilities::all(),
 		);
 	}
 

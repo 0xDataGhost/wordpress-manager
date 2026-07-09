@@ -14,6 +14,7 @@ export interface ConnectionStatusDto {
   wpVersion: string | null;
   wcVersion: string | null;
   connectorVersion: string | null;
+  connectorCapabilities: string[];
   lastConnectedAt: Date | null;
   lastHealthCheckAt: Date | null;
   lastHealthStatus: string | null;
@@ -34,6 +35,9 @@ export function toConnectionStatusDto(
     wpVersion: row.wpVersion,
     wcVersion: row.wcVersion,
     connectorVersion: row.connectorVersion,
+    connectorCapabilities: Array.isArray(row.connectorCapabilities)
+      ? (row.connectorCapabilities as string[])
+      : [],
     lastConnectedAt: row.lastConnectedAt,
     lastHealthCheckAt: row.lastHealthCheckAt,
     lastHealthStatus: row.lastHealthStatus,
@@ -54,6 +58,7 @@ export function disconnectedStatusDto(storeId: string): ConnectionStatusDto {
     wpVersion: null,
     wcVersion: null,
     connectorVersion: null,
+    connectorCapabilities: [],
     lastConnectedAt: null,
     lastHealthCheckAt: null,
     lastHealthStatus: null,

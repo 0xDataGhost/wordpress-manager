@@ -1,6 +1,6 @@
 import type { DeliveryChannel } from "../../db/schema/digital-deliveries";
 import { getConnectionByStoreId } from "../connections/connections.service";
-import { wpRequest } from "../connections/wp-client";
+import { runWpCommand } from "../wp-commands/wp-commands.service";
 
 /**
  * Delivery channel handlers (Phase 18, plan2 §18). A handler attempts to deliver
@@ -61,20 +61,34 @@ async function deliverWooNote(ctx: ChannelContext): Promise<ChannelResult> {
     return skipped("NOT_CONNECTED", "Store is not connected to WooCommerce.");
   }
 
-  // Note body carries NO codes — just a ready notice (plan2 §18).
+  // Note body carries NO codes — just a ready notice (plan2 §18). Phase 25:
+  // routed through the command outbox (system-originated, so createdBy null);
+  // channel semantics stay non-throwing — the command row carries the outcome.
   const note = `تم تجهيز ${ctx.assignmentCount} كود رقمي لهذا الطلب. الأكواد متاحة بأمان عبر لوحة التحكم/الدعم.`;
-  const result = await wpRequest(
-    connection,
-    "POST",
-    `orders/${ctx.wpOrderId}/digital-note`,
-    { status: "completed", note, codeCount: ctx.assignmentCount },
-  );
+  let command;
+  try {
+    command = await runWpCommand({
+      storeId: ctx.storeId,
+      domain: "order",
+      action: "add_digital_note",
+      targetWpId: ctx.wpOrderId,
+      payload: { status: "completed", note, codeCount: ctx.assignmentCount },
+      createdBy: null,
+    });
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Failed to add WooCommerce note.";
+    return failed("WC_NOTE_FAILED", message);
+  }
 
-  if (result.ok) {
-    const data = result.data as { noteId?: number } | null;
+  if (command.status === "succeeded") {
+    const data = command.result as { noteId?: number } | null;
     return sent("woocommerce_note", data?.noteId ? String(data.noteId) : null);
   }
-  return failed("WC_NOTE_FAILED", result.message || "Failed to add WooCommerce note.");
+  return failed(
+    "WC_NOTE_FAILED",
+    command.lastError || "Failed to add WooCommerce note.",
+  );
 }
 
 /** email: placeholder — no email infrastructure is configured yet. */

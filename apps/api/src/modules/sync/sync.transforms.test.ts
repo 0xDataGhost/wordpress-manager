@@ -91,3 +91,40 @@ test("wooOrderSchema maps guest customers to null and parses line items", () => 
   assert.equal(parsed.lineItems[0]?.wpProductId, 42);
   assert.equal(parsed.lineItems[0]?.total, "200.00");
 });
+
+test("wooOrderSchema stays backward compatible and parses Phase 27 refund fields", async () => {
+  const { wooOrderSchema } = await import("./sync.schemas");
+
+  // Old connector payload (no refunds/version) still parses with defaults.
+  const legacy = wooOrderSchema.parse({
+    wpOrderId: 1001,
+    status: "processing",
+    total: "100",
+  });
+  assert.equal(legacy.totalRefunded, "0.00");
+  assert.deepEqual(legacy.refunds, []);
+  assert.equal(legacy.dateModified ?? null, null);
+
+  // New connector payload carries refunds + the version token.
+  const modern = wooOrderSchema.parse({
+    wpOrderId: 1001,
+    status: "processing",
+    total: "100",
+    totalRefunded: "25.5",
+    dateModified: "1783700000",
+    refunds: [
+      {
+        wpRefundId: 55,
+        amount: "25.5",
+        reason: "طلب العميل",
+        refundedPayment: true,
+        dateCreated: "2026-07-01T10:00:00Z",
+      },
+    ],
+  });
+  assert.equal(modern.totalRefunded, "25.50");
+  assert.equal(modern.dateModified, "1783700000");
+  assert.equal(modern.refunds.length, 1);
+  assert.equal(modern.refunds[0]!.amount, "25.50");
+  assert.equal(modern.refunds[0]!.refundedPayment, true);
+});

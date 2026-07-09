@@ -136,3 +136,34 @@ test("listWebhookEventsQuerySchema coerces and bounds the limit", () => {
   assert.throws(() => listWebhookEventsQuerySchema.parse({ limit: 0 }));
   assert.throws(() => listWebhookEventsQuerySchema.parse({ limit: 1000 }));
 });
+
+test("webhook schemas accept the Phase 25 echo fields", () => {
+  const parsed = productWebhookSchema.parse({
+    event: "product.updated",
+    eventId: "evt-echo-1",
+    externalId: "42",
+    originCommandId: "0b0e8f6a-1111-4222-8333-444455556666",
+    entityVersion: "2026-07-01T10:00:00",
+    data: {
+      wpProductId: "42",
+      name: "قميص",
+      price: "199.9",
+      stockQuantity: "5",
+      status: "publish",
+    },
+  });
+  assert.equal(parsed.originCommandId, "0b0e8f6a-1111-4222-8333-444455556666");
+  assert.equal(parsed.entityVersion, "2026-07-01T10:00:00");
+});
+
+test("webhook schemas reject a non-uuid originCommandId", () => {
+  assert.throws(() =>
+    orderWebhookSchema.parse({
+      event: "order.updated",
+      eventId: "evt-echo-2",
+      externalId: "1001",
+      originCommandId: "not-a-uuid",
+      data: { wpOrderId: 1001, status: "processing", total: "10" },
+    }),
+  );
+});
