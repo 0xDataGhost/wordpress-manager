@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WordPress Manager — Product Overview</title>
+<style>
+  :root {
+    --ink: #14121f;
+    --ink-soft: #4a4660;
+    --ink-faint: #6f6a85;
+    --paper: #f6f4ef;
+    --surface: #ffffff;
+    --surface-2: #faf9f6;
+    --line: #e6e2d9;
+    --accent: #5b4bd6;
+    --accent-2: #8b5cf6;
+    --accent-ink: #2e2470;
+    --gold: #b9945a;
+    --ok: #2f9e6b;
+    --danger: #d1495b;
+    --shadow-sm: 0 1px 2px rgba(20, 18, 31, 0.04), 0 2px 8px rgba(20, 18, 31, 0.05);
+    --shadow-md: 0 4px 12px rgba(20, 18, 31, 0.06), 0 12px 32px rgba(20, 18, 31, 0.08);
+    --radius: 16px;
+    --maxw: 1080px;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Georgia", serif;
+    --mono: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.6;
+    font-size: 17px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
+
+  /* ---------- top ribbon ---------- */
+  .ribbon {
+    background: var(--ink);
+    color: #cfc9e6;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+  }
+  .ribbon .wrap {
+    display: flex; flex-wrap: wrap; gap: 10px 22px;
+    align-items: center; justify-content: space-between;
+    padding-top: 11px; padding-bottom: 11px;
+  }
+  .ribbon strong { color: #fff; font-weight: 600; }
+  .ribbon .dot { color: var(--accent-2); }
+
+  /* ---------- hero ---------- */
+  .hero {
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(1100px 500px at 78% -10%, rgba(139, 92, 246, 0.20), transparent 60%),
+      radial-gradient(900px 480px at 8% 8%, rgba(91, 75, 214, 0.16), transparent 58%),
+      linear-gradient(180deg, #f8f6f1, #f2efe8);
+    border-bottom: 1px solid var(--line);
+  }
+  .hero .wrap { padding-top: 84px; padding-bottom: 80px; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 9px;
+    font-size: 12.5px; font-weight: 600; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--accent-ink);
+    background: rgba(91, 75, 214, 0.09);
+    border: 1px solid rgba(91, 75, 214, 0.18);
+    padding: 7px 14px; border-radius: 100px;
+  }
+  .eyebrow .pip { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px rgba(91,75,214,.15); }
+  h1.title {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(2.6rem, 1.4rem + 4.6vw, 4.7rem);
+    line-height: 1.03;
+    letter-spacing: -0.02em;
+    margin: 26px 0 0;
+    max-width: 15ch;
+  }
+  h1.title .grad {
+    background: linear-gradient(115deg, var(--accent), var(--accent-2) 60%, var(--gold));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .lede {
+    font-size: clamp(1.06rem, 0.98rem + 0.5vw, 1.28rem);
+    color: var(--ink-soft);
+    max-width: 60ch;
+    margin: 26px 0 0;
+  }
+  .hero-cta { margin-top: 34px; display: flex; flex-wrap: wrap; gap: 14px; }
+  .stat-row {
+    margin-top: 52px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px;
+    max-width: 760px;
+  }
+  .stat { }
+  .stat b {
+    font-family: var(--serif);
+    display: block; font-size: 2rem; line-height: 1; color: var(--accent-ink);
+    letter-spacing: -0.01em;
+  }
+  .stat span { font-size: 13px; color: var(--ink-faint); letter-spacing: 0.02em; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    font-size: 15px; font-weight: 600; text-decoration: none;
+    padding: 13px 22px; border-radius: 12px;
+    transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+  }
+  .btn-primary { background: var(--ink); color: #fff; box-shadow: var(--shadow-sm); }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); background: #241f38; }
+  .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent-ink); transform: translateY(-2px); }
+
+  /* ---------- sections ---------- */
+  section { padding: 76px 0; border-bottom: 1px solid var(--line); }
+  .sec-head { max-width: 62ch; margin-bottom: 42px; }
+  .sec-num {
+    font-family: var(--mono); font-size: 13px; letter-spacing: 0.1em;
+    color: var(--accent); font-weight: 600;
+  }
+  h2 {
+    font-family: var(--serif); font-weight: 600;
+    font-size: clamp(1.8rem, 1.2rem + 2vw, 2.7rem);
+    line-height: 1.1; letter-spacing: -0.018em;
+    margin: 12px 0 0;
+  }
+  .sec-head p { color: var(--ink-soft); font-size: 1.08rem; margin-top: 16px; }
+
+  /* problem cards */
+  .grid { display: grid; gap: 20px; }
+  .g2 { grid-template-columns: repeat(2, 1fr); }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .g4 { grid-template-columns: repeat(4, 1fr); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 26px 24px;
+    box-shadow: var(--shadow-sm);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  }
+  .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: #d9d3c6; }
+  .card .ico {
+    width: 40px; height: 40px; border-radius: 11px;
+    display: grid; place-items: center; font-size: 20px;
+    background: linear-gradient(150deg, rgba(91,75,214,.12), rgba(139,92,246,.12));
+    border: 1px solid rgba(91,75,214,.16);
+    margin-bottom: 15px;
+  }
+  .card h3 { font-size: 1.06rem; font-weight: 650; letter-spacing: -0.01em; }
+  .card p { color: var(--ink-soft); font-size: 0.96rem; margin-top: 7px; }
+
+  .lead-in { background: var(--surface-2); }
+
+  /* persona / capability tables */
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-sm); background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; min-width: 560px; }
+  th, td { text-align: left; padding: 16px 20px; vertical-align: top; }
+  thead th {
+    background: var(--surface-2);
+    font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--ink-faint); font-weight: 700;
+    border-bottom: 1px solid var(--line);
+  }
+  tbody tr + tr td { border-top: 1px solid var(--line); }
+  tbody tr:hover td { background: rgba(91,75,214,.028); }
+  td:first-child { font-weight: 650; color: var(--ink); white-space: nowrap; }
+  td .muted { color: var(--ink-soft); font-weight: 400; }
+  table.cap td:first-child { white-space: normal; }
+
+  /* boundary callout */
+  .callout {
+    margin-top: 24px;
+    display: flex; gap: 16px; align-items: flex-start;
+    background: linear-gradient(180deg, #fbfaf6, #f7f4ec);
+    border: 1px dashed #d8cfba;
+    border-radius: var(--radius);
+    padding: 22px 24px;
+  }
+  .callout .ico { font-size: 22px; }
+  .callout h3 { font-size: 1rem; font-weight: 650; margin-bottom: 4px; }
+  .callout p { color: var(--ink-soft); font-size: 0.96rem; }
+
+  /* architecture */
+  .arch { background: var(--surface-2); }
+  .diagram {
+    background: var(--ink);
+    border-radius: var(--radius);
+    padding: 34px;
+    color: #ded9f0;
+    overflow-x: auto;
+    box-shadow: var(--shadow-md);
+  }
+  .diagram pre {
+    font-family: var(--mono); font-size: 13px; line-height: 1.55;
+    color: #cfc9e6; white-space: pre; margin: 0;
+  }
+  .flow {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 26px;
+  }
+  .node {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 13px;
+    padding: 18px 18px; box-shadow: var(--shadow-sm);
+  }
+  .node .tag { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: .06em; }
+  .node h4 { font-size: 0.98rem; margin: 6px 0 4px; font-weight: 650; }
+  .node p { font-size: 0.88rem; color: var(--ink-soft); }
+
+  .principles { margin-top: 30px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 34px; }
+  .principle { display: flex; gap: 14px; padding: 6px 0; }
+  .principle .k {
+    flex: 0 0 auto; width: 30px; height: 30px; border-radius: 9px;
+    display: grid; place-items: center; font-weight: 700; font-size: 15px;
+    background: var(--ink); color: #fff;
+  }
+  .principle b { font-size: 0.98rem; }
+  .principle p { color: var(--ink-soft); font-size: 0.93rem; }
+
+  /* security */
+  .security { background: linear-gradient(180deg, #1b1730, #14121f); color: #e8e4f6; border-bottom: none; }
+  .security h2 { color: #fff; }
+  .security .sec-head p { color: #b6afd4; }
+  .security .sec-num { color: var(--accent-2); }
+  .sec-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .sec-item {
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 14px; padding: 22px 22px;
+    transition: background .18s ease, border-color .18s ease;
+  }
+  .sec-item:hover { background: rgba(139,92,246,.10); border-color: rgba(139,92,246,.35); }
+  .sec-item .chk { color: #9d86ff; font-weight: 700; }
+  .sec-item h3 { color: #fff; font-size: 1rem; margin: 8px 0 5px; font-weight: 650; }
+  .sec-item p { color: #b6afd4; font-size: 0.93rem; }
+
+  /* tech + roadmap */
+  .badges { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+  .badge {
+    font-family: var(--mono); font-size: 12.5px;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px 11px; color: var(--ink-soft);
+  }
+  .roadmap { list-style: none; counter-reset: step; }
+  .roadmap li {
+    position: relative; counter-increment: step;
+    padding: 18px 0 18px 58px; border-bottom: 1px solid var(--line);
+  }
+  .roadmap li:last-child { border-bottom: none; }
+  .roadmap li::before {
+    content: counter(step); position: absolute; left: 0; top: 16px;
+    width: 38px; height: 38px; border-radius: 11px;
+    background: linear-gradient(150deg, var(--accent), var(--accent-2));
+    color: #fff; font-weight: 700; display: grid; place-items: center;
+    box-shadow: var(--shadow-sm);
+  }
+  .roadmap b { font-size: 1.02rem; }
+  .roadmap p { color: var(--ink-soft); font-size: 0.96rem; margin-top: 2px; }
+  .status-note {
+    margin-top: 26px; padding: 18px 22px; border-radius: 13px;
+    background: rgba(47,158,107,.08); border: 1px solid rgba(47,158,107,.25);
+    color: #226b4c; font-size: 0.98rem;
+  }
+  .status-note b { color: #185138; }
+
+  /* pitch */
+  .pitch { background: var(--ink); color: #fff; border-bottom: none; text-align: center; }
+  .pitch .wrap { max-width: 900px; }
+  .pitch blockquote {
+    font-family: var(--serif); font-weight: 500;
+    font-size: clamp(1.4rem, 1rem + 2vw, 2.15rem);
+    line-height: 1.32; letter-spacing: -0.01em;
+    color: #fff; margin: 0 auto; max-width: 24ch;
+  }
+  .pitch blockquote .grad {
+    background: linear-gradient(115deg, var(--accent-2), var(--gold));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .pitch ul { list-style: none; margin: 40px auto 0; max-width: 760px;
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 26px; text-align: left; }
+  .pitch li { display: flex; gap: 12px; color: #cfc9e6; font-size: 0.98rem; }
+  .pitch li .m { color: var(--accent-2); font-weight: 700; }
+
+  footer { padding: 40px 0 60px; color: var(--ink-faint); font-size: 13.5px; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; }
+
+  /* responsive */
+  @media (max-width: 900px) {
+    .g4 { grid-template-columns: repeat(2, 1fr); }
+    .g3 { grid-template-columns: repeat(2, 1fr); }
+    .flow { grid-template-columns: 1fr; }
+    .principles, .sec-grid, .pitch ul { grid-template-columns: 1fr; }
+    .stat-row { grid-template-columns: repeat(2, 1fr); gap: 24px 18px; }
+  }
+  @media (max-width: 560px) {
+    body { font-size: 16px; }
+    .g2, .g4, .g3 { grid-template-columns: 1fr; }
+    section { padding: 56px 0; }
+    .hero .wrap { padding-top: 56px; padding-bottom: 56px; }
+  }
+
+  @media print {
+    body { background: #fff; font-size: 12px; }
+    .ribbon, .hero-cta, footer { display: none; }
+    section, .hero { border-color: #ddd; padding: 24px 0; }
+    .security, .pitch { background: #fff; color: #000; -webkit-print-color-adjust: exact; }
+    .security h2, .sec-item h3, .pitch blockquote { color: #000; }
+    .card, .sec-item, .node { box-shadow: none; break-inside: avoid; }
+    .diagram { background: #f4f4f4; color: #222; }
+    .diagram pre { color: #222; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="ribbon">
+    <div class="wrap">
+      <span><strong>WordPress Manager</strong> <span class="dot">◆</span> Product Overview</span>
+      <span>v1.0.0 <span class="dot">·</span> Feature-complete, pilot-ready <span class="dot">·</span> Multi-tenant SaaS</span>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="wrap">
+      <span class="eyebrow"><span class="pip"></span> WooCommerce Operations, Reimagined</span>
+      <h1 class="title">Run your whole store <span class="grad">without living in wp-admin.</span></h1>
+      <p class="lede">
+        A multi-tenant SaaS dashboard that lets your team operate a WordPress / WooCommerce
+        store — catalog, orders, refunds, coupons, customers, reviews, and settings — from one
+        fast, Arabic-first control panel. Real roles, a full audit trail, money-safe by design.
+      </p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#capabilities">See what it does →</a>
+        <a class="btn btn-ghost" href="#architecture">How it works</a>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><b>1</b><span>dashboard, many stores</span></div>
+        <div class="stat"><b>7</b><span>operational surfaces</span></div>
+        <div class="stat"><b>380</b><span>automated tests, green</span></div>
+        <div class="stat"><b>0</b><span>secrets leave WordPress</span></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- PROBLEM -->
+  <section class="lead-in" id="problem">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="sec-num">01 — The problem</span>
+        <h2>Running a store from wp-admin creates real friction.</h2>
+        <p>The default WooCommerce admin mixes e-commerce work with WordPress internals — slow,
+        cluttered, and unsafe to delegate.</p>
+      </div>
+      <div class="grid g4">
+        <div class="card">
+          <div class="ico">🔓</div>
+          <h3>No separation of duties</h3>
+          <p>Anyone who touches orders effectively gets the keys to the entire site.</p>
+        </div>
+        <div class="card">
+          <div class="ico">🙅</div>
+          <h3>No safe delegation</h3>
+          <p>You can't grant "refund + reply to reviews" without exposing plugins, users, settings.</p>
+        </div>
+        <div class="card">
+          <div class="ico">🕳️</div>
+          <h3>No visibility</h3>
+          <p>No unified audit of who changed what, no clean fulfillment view, no multi-store overview.</p>
+        </div>
+        <div class="card">
+          <div class="ico">🔑</div>
+          <h3>One store, one login</h3>
+          <p>Several stores means several wp-admin logins and no shared team model.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SOLUTION -->
+  <section id="solution">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="sec-num">02 — The solution</span>
+        <h2>A dedicated operations dashboard beside WooCommerce.</h2>
+        <p>A fast, purpose-built, Arabic-first (RTL) interface for exactly the e-commerce tasks
+        your team does every day — with real roles and a full audit trail — while WordPress
+        itself stays locked down.</p>
+      </div>
+      <div class="grid g3">
+        <div class="card">
+          <div class="ico">🏢</div>
+          <h3>Multi-tenant</h3>
+          <p>One deployment serves many independent stores — each with its own team, permissions,
+          data, and WooCommerce connection, fully isolated.</p>
+        </div>
+        <div class="card">
+          <div class="ico">🎛️</div>
+          <h3>Purpose-built</h3>
+          <p>Only the daily e-commerce surfaces, on a UI designed for the job — not the whole
+          sprawling WordPress admin.</p>
+        </div>
+        <div class="card">
+          <div class="ico">🛡️</div>
+          <h3>Locked-down WordPress</h3>
+          <p>A thin connector plugin executes commands; all logic lives in the SaaS and payment
+          secrets never leave the store.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHO -->
+  <section class="lead-in" id="personas">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="sec-num">03 — Who it's for</span>
+        <h2>Granular roles, not fixed tiers.</h2>
+        <p>Every capability — "refund money via gateway", "toggle payment gateways", "manage
+        taxes" — is a separate permission you grant per team member.</p>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Persona</th><th>What they get</th></tr></thead>
+          <tbody>
+            <tr><td>Store owner</td><td class="muted">Full control + team management, without handing out wp-admin.</td></tr>
+            <tr><td>Manager</td><td class="muted">Catalog, orders, coupons, reviews, shipping — the daily driver.</td></tr>
+            <tr><td>Order employee</td><td class="muted">Process orders and fulfillment; no settings or money-refunds.</td></tr>
+            <tr><td>Customer support</td><td class="muted">Edit customer details, moderate reviews, add order notes.</td></tr>
+            <tr><td>Accountant / marketer</td><td class="muted">Read-only financials / catalog + reports.</td></tr>
+            <tr><td>Agencies</td><td class="muted">Manage multiple client stores from one multi-tenant instance.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- CAPABILITIES -->
+  <section id="capabilities">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="sec-num">04 — Capabilities</span>
+        <h2>What you can do from the dashboard.</h2>
+        <p>Everything writes back to the live store through the secure command pipeline —
+        permission-gated, audit-logged, and safe against double-applies and conflicts.</p>
+      </div>
+      <div class="tbl-wrap">
+        <table class="cap">
+          <thead><tr><th>Area</th><th>Capabilities</th></tr></thead>
+          <tbody>
+            <tr><td>Products</td><td class="muted">Create, edit, publish, delete (trash/permanent), variations, bulk price/stock/status, image upload.</td></tr>
+            <tr><td>Catalog</td><td class="muted">Categories, tags, attributes — full CRUD.</td></tr>
+            <tr><td>Orders</td><td class="muted">Change status, add private/customer notes, issue refunds — record-only <em>or real money back through the payment gateway</em>.</td></tr>
+            <tr><td>Coupons</td><td class="muted">Full create/edit/delete — type, amount, expiry, usage limits, restrictions.</td></tr>
+            <tr><td>Customers</td><td class="muted">Edit name, phone, billing &amp; shipping addresses.</td></tr>
+            <tr><td>Reviews</td><td class="muted">Approve / hold / spam / trash, and reply as the store.</td></tr>
+            <tr><td>Store settings</td><td class="muted">General/product/tax settings, shipping zones &amp; methods, tax rates, enable/disable payment gateways.</td></tr>
+            <tr><td>Operations</td><td class="muted">Command Center (every action + retry failures), live parity check vs. WordPress, notifications, full audit log.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout">
+        <div class="ico">🚫</div>
+        <div>
+          <h3>Stays in wp-admin by design</h3>
+          <p>Installing plugins/themes, WP users &amp; passwords, page/post content, <strong>payment
+          gateway secret credentials</strong>, and WooCommerce Subscriptions/Bookings. A deliberate
+          security boundary — not a gap.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DIGITAL ENGINE -->
+  <section class="lead-in" id="digital">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="sec-num">05 — Included engine</span>
+        <h2>Complete digital / license-key fulfillment.</h2>
+        <p>For code- and key-delivery stores, the platform ships a full fulfillment system —
+        money-safe and audited end to end.</p>
+      </div>
+      <div class="grid g3">
+        <div class="card"><div class="ico">🔐</div><h3>Encrypted inventory</h3><p>Code keys stored encrypted at rest; masked by default, revealed only through a permissioned, audited endpoint.</p></div>
+        <div class="card"><div class="ico">⚡</div><h3>Auto assign &amp; deliver</h3><p>Codes reserved and delivered automatically on order events, with manual fulfillment and replacements.</p></div>
+        <div class="card"><div class="ico">📊</div><h3>Suppliers &amp; profit</h3><p>Supplier cost tracking, batch management, and profit reports — plus customer self-service code access.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARCHITECTURE -->
+  <section class="arch" id="architecture">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="sec-num">06 — Architecture</span>
+        <h2>One safe pipeline to WordPress.</h2>
+        <p>The dashboard never edits WordPress directly. Every change flows through a
+        <strong>command outbox</strong> — the heart of the system.</p>
+      </div>
+
+      <div class="diagram">
+<pre>┌─────────────────────┐      signed, idempotent commands      ┌──────────────────────┐
+│   React Dashboard    │  ─────────  (HMAC + keys)  ─────────▶ │  WordPress Connector  │
+│   Arabic RTL SPA     │                                       │   thin WP plugin      │
+│          │           │  ◀─────────  real-time webhooks  ──── │          │            │
+└──────────┼───────────┘                                       └──────────┼───────────┘
+           │                                                              │
+   ┌───────▼────────────┐         mirror + command outbox        ┌────────▼───────────┐
+   │   SaaS API (Node)   │  ───────────────────────────────────  │  WooCommerce store  │
+   │   Postgres · Redis  │                                        │  (source of truth)  │
+   └─────────────────────┘                                        └─────────────────────┘</pre>
+      </div>
+
+      <div class="flow">
+        <div class="node"><span class="tag">STEP 1</span><h4>Recorded first</h4><p>Every change is written to the outbox before it's attempted — nothing is lost if WordPress is briefly down; failures retry from the Command Center.</p></div>
+        <div class="node"><span class="tag">STEP 2</span><h4>Executed safely</h4><p>Sent to the connector signed and idempotent, so a retry can never apply a change twice — this is what makes money refunds safe.</p></div>
+        <div class="node"><span class="tag">STEP 3</span><h4>Kept in sync</h4><p>Webhooks mirror WordPress back in real time; reconciliation re-pulls anything a lost webhook missed.</p></div>
+      </div>
+
+      <div class="principles">
+        <div class="principle"><span class="k">i</span><div><b>Idempotent</b><p>A retry — even after a timeout — never applies a change twice.</p></div></div>
+        <div class="principle"><span class="k">e</span><div><b>Echo-suppressed</b><p>A change's own webhook isn't re-processed as an external edit. No loops.</p></div></div>
+        <div class="principle"><span class="k">c</span><div><b>Compare-and-set</b><p>A concurrent wp-admin edit yields a "refresh &amp; retry" conflict, never a silent overwrite.</p></div></div>
+        <div class="principle"><span class="k">h</span><div><b>Self-healing</b><p>Reconciliation detects drift vs. WooCommerce and re-pulls the affected data.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECURITY -->
+  <section class="security" id="security">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="sec-num">07 — Security &amp; trust</span>
+        <h2>Audited adversarially before release.</h2>
+        <p>Security is the center of the design — not an afterthought.</p>
+      </div>
+      <div class="sec-grid">
+        <div class="sec-item"><span class="chk">✓ Tenant isolation</span><h3>No cross-store access</h3><p>Every record is scoped to its store; audited clean. No store can ever read or touch another's data.</p></div>
+        <div class="sec-item"><span class="chk">✓ Payment secrets</span><h3>Never leave WordPress</h3><p>Enable/disable gateways from the dashboard — but API keys &amp; secrets are stripped at the connector and again at the SaaS.</p></div>
+        <div class="sec-item"><span class="chk">✓ Money-safe refunds</span><h3>No double-spend</h3><p>A stable idempotency key end-to-end plus a database in-flight guard make double-refunds impossible, even under retries.</p></div>
+        <div class="sec-item"><span class="chk">✓ Signed transport</span><h3>HMAC + replay window</h3><p>Every request between the SaaS and WordPress is signed and time-boxed against replay.</p></div>
+        <div class="sec-item"><span class="chk">✓ Full audit trail</span><h3>Who / what / when</h3><p>Every sensitive action is logged — ids and counts only, never secrets or PII values.</p></div>
+        <div class="sec-item"><span class="chk">✓ Least privilege</span><h3>Per-action permissions</h3><p>Money and config actions sit behind their own stricter, separately-grantable permissions.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TECH + ROADMAP -->
+  <section id="tech">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="sec-num">08 — Technology &amp; status</span>
+        <h2>Modern, typed, and tested.</h2>
+      </div>
+      <div class="grid g2" style="align-items:start">
+        <div class="card">
+          <h3 style="margin-bottom:14px">Stack</h3>
+          <div class="badges">
+            <span class="badge">React + Vite</span>
+            <span class="badge">TypeScript (strict)</span>
+            <span class="badge">Arabic RTL · dark/light</span>
+            <span class="badge">Node.js + Express</span>
+            <span class="badge">Drizzle ORM</span>
+            <span class="badge">Zod validation</span>
+            <span class="badge">PostgreSQL</span>
+            <span class="badge">Redis + BullMQ</span>
+            <span class="badge">WordPress plugin (PHP)</span>
+            <span class="badge">HMAC-signed REST</span>
+          </div>
+          <p style="color:var(--ink-soft);font-size:.95rem;margin-top:18px">
+            Quality gates: 380 automated API tests, strict typecheck &amp; lint, and PHP lint —
+            all green.
+          </p>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:6px">To reach a commercial, self-serve SaaS</h3>
+          <p style="color:var(--ink-soft);font-size:.94rem;margin-bottom:6px">Business/ops layers, not the product engine:</p>
+          <ol class="roadmap">
+            <li><b>Billing &amp; plans</b><p>Subscriptions, plan tiers, quota enforcement.</p></li>
+            <li><b>Self-serve onboarding</b><p>Signup → create store → connect WordPress → choose plan.</p></li>
+            <li><b>Production hosting</b><p>Deploy (server, Postgres, Redis, domain, TLS) + monitoring.</p></li>
+            <li><b>Email infrastructure</b><p>Provider wiring for outbound notifications.</p></li>
+          </ol>
+        </div>
+      </div>
+      <div class="status-note">
+        <b>Status:</b> the full write-back platform is feature-complete and green. Architecturally
+        it is a genuine multi-tenant SaaS, and it is <b>pilot-ready</b> — able to onboard one or a
+        few real stores and run their daily operations end-to-end today.
+      </div>
+    </div>
+  </section>
+
+  <!-- PITCH -->
+  <section class="pitch" id="pitch">
+    <div class="wrap">
+      <span class="sec-num" style="color:var(--accent-2)">09 — Why it matters</span>
+      <blockquote>
+        Give your team a fast, safe control panel for your store — <span class="grad">delegate the right
+        access, see every change,</span> and never expose WordPress or payment secrets.
+      </blockquote>
+      <ul>
+        <li><span class="m">→</span> <span><b>Faster daily operations</b> than wp-admin, on a UI built for the job.</span></li>
+        <li><span class="m">→</span> <span><b>Safe delegation</b> — real roles, real permissions, real audit trail.</span></li>
+        <li><span class="m">→</span> <span><b>Money-safe by design</b> — refunds and stock changes can't double-apply.</span></li>
+        <li><span class="m">→</span> <span><b>Multi-store from day one</b> — agencies and multi-brand operators scale cleanly.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <span>WordPress Manager — Product Overview · v1.0.0</span>
+      <span>Multi-tenant SaaS for WordPress / WooCommerce operations</span>
+    </div>
+  </footer>
+
+</body>
+</html>
