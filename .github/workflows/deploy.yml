@@ -1,0 +1,80 @@
+name: Deploy WordPress Manager
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            apps/api/package-lock.json
+            apps/dashboard/package-lock.json
+
+      - name: Build API
+        run: |
+          cd apps/api
+          npm ci
+          npm run build
+
+      - name: Build Dashboard
+        env:
+          VITE_API_URL: http://72.62.149.127:8080
+        run: |
+          cd apps/dashboard
+          npm ci
+          npm run build
+
+      - name: Setup SSH
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy API build
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          rsync -avz --delete -e "ssh -p ${{ secrets.SSH_PORT }}" \
+            apps/api/dist/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/wordpress-manager/api/dist/
+          rsync -avz -e "ssh -p ${{ secrets.SSH_PORT }}" \
+            apps/api/package.json apps/api/package-lock.json \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/wordpress-manager/api/
+
+      - name: Deploy Dashboard build
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          rsync -avz --delete -e "ssh -p ${{ secrets.SSH_PORT }}" \
+            apps/dashboard/dist/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/wordpress-manager/dashboard/
+
+      - name: Install deps, migrate & restart
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'REMOTE'
+            set -e
+            cd /var/www/wordpress-manager/api
+            npm ci --omit=dev
+            node --env-file=.env dist/db/migrate.js 2>/dev/null || \
+              node -r dotenv/config dist/db/migrate.js 2>/dev/null || \
+              echo "No migration script found — skipping"
+            sudo /usr/lib/node_modules/pm2/bin/pm2 restart wordpress-manager-api \
+              || sudo /usr/lib/node_modules/pm2/bin/pm2 start ecosystem.config.cjs
+            sudo /usr/lib/node_modules/pm2/bin/pm2 save
+          REMOTE
