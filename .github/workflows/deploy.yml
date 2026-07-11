@@ -33,7 +33,7 @@ jobs:
 
       - name: Build Dashboard
         env:
-          VITE_API_URL: http://72.62.149.127:8080
+          VITE_API_URL: https://management-wordpress.com
         run: |
           cd apps/dashboard
           npm ci
