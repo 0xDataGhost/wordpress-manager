@@ -56,6 +56,9 @@ jobs:
           rsync -avz -e "ssh -p ${{ secrets.SSH_PORT }}" \
             apps/api/package.json apps/api/package-lock.json \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/wordpress-manager/api/
+          rsync -avz -e "ssh -p ${{ secrets.SSH_PORT }}" \
+            apps/api/drizzle/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/wordpress-manager/api/drizzle/
 
       - name: Deploy Dashboard build
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
