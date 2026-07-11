@@ -74,7 +74,5 @@ jobs:
             node --env-file=.env dist/db/migrate.js 2>/dev/null || \
               node -r dotenv/config dist/db/migrate.js 2>/dev/null || \
               echo "No migration script found — skipping"
-            sudo /usr/lib/node_modules/pm2/bin/pm2 restart wordpress-manager-api \
-              || sudo /usr/lib/node_modules/pm2/bin/pm2 start ecosystem.config.cjs
-            sudo /usr/lib/node_modules/pm2/bin/pm2 save
+            sudo /usr/local/bin/restart-manager-api
           REMOTE
